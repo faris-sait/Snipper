@@ -1,26 +1,59 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-bg: var(--bg);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-muted-fg: var(--muted-fg);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-border: var(--border);
+  --color-card: var(--card);
+  --color-warning: var(--warning);
+  --color-success: var(--success);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
+:root {
+  --bg: #fbfaf6; /* warm cream — financial/serious without sterile white */
+  --fg: #1a1a1a;
+  --muted: #f1efe8;
+  --muted-fg: #5a5a52;
+  --border: #e3dfd2;
+  --card: #ffffff;
+  --accent: #0d4f3c; /* deep emerald — money color, distinct from generic blue */
+  --accent-fg: #fbfaf6;
+  --warning: #b54708;
+  --success: #0d6e3a;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg: #0f0f0d;
+    --fg: #f1efe8;
+    --muted: #1c1c19;
+    --muted-fg: #8a8a82;
+    --border: #2a2a26;
+    --card: #18181a;
+    --accent: #4ec594;
+    --accent-fg: #0f0f0d;
+    --warning: #f5a524;
+    --success: #4ec594;
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  font-feature-settings: "ss01", "cv11";
+}
+
+@layer utilities {
+  .balance {
+    text-wrap: balance;
+  }
+  .pretty {
+    text-wrap: pretty;
+  }
 }
