@@ -4,7 +4,7 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
-# TokenTally — agent / contributor notes
+# Snipper — agent / contributor notes
 
 This repo is the Round-1 take-home for [credex.rocks](https://credex.rocks). It's a free AI spend audit tool — see [`README.md`](./README.md) for the user-facing summary.
 

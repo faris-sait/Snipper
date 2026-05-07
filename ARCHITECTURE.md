@@ -45,7 +45,7 @@ flowchart TB
 ## Data flow: how an audit becomes a result
 
 1. **Visitor lands on `/`** — server-rendered marketing page with cited stats.
-2. **Visitor opens `/audit`** — client component for the multi-tool form (Phase 2). Form state persists in `localStorage` keyed by `tokentally:draft:v1` so refreshes don't lose work.
+2. **Visitor opens `/audit`** — client component for the multi-tool form (Phase 2). Form state persists in `localStorage` keyed by `snipper:draft:v1` so refreshes don't lose work.
 3. **Visitor submits** — a Next.js Server Action receives the typed payload (validated with Zod), calls `runAudit()` from `src/lib/audit/engine.ts`. The engine is a pure function; it returns deterministically without touching any external service. This is why it can be unit-tested in isolation.
 4. **Server Action persists the audit** — writes a row to `audits` in Supabase (audit input + computed result + a generated `id`). Returns the `id` to the client.
 5. **Visitor sees the result page** — `/audit/result?id=...` reads the audit back from Supabase by id (server component, cached short-term).

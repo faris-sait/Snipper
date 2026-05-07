@@ -1,10 +1,10 @@
-# TokenTally
+# Snipper
 
 A free 60-second AI spend audit. Built for startup founders and engineering managers who pay full retail across five different AI tools and have no benchmark.
 
 > **Project status:** in active development as part of the Credex Round 1 take-home (2026-05-07 → 2026-05-14). See [DEVLOG.md](./DEVLOG.md) for daily progress.
 
-**Live URL:** _will be added when Vercel deploy is wired up._
+**Live URL:** https://snipper-alpha.vercel.app/
 
 ## Screenshots / demo
 

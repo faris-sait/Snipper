@@ -43,4 +43,4 @@ jobs:
         run: pnpm build
         env:
           # Build-time env placeholders — real secrets live in Vercel.
-          NEXT_PUBLIC_SITE_URL: https://tokentally.app
+          NEXT_PUBLIC_SITE_URL: https://snipper-alpha.vercel.app

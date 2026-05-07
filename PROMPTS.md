@@ -1,6 +1,6 @@
 # Prompts
 
-Full LLM prompts used in TokenTally. Each prompt has a purpose, the prompt itself, and notes on what was iterated on.
+Full LLM prompts used in Snipper. Each prompt has a purpose, the prompt itself, and notes on what was iterated on.
 
 > The Phase-5 personalised summary prompt lands here when the AI summary feature ships. The placeholder below is a stub.
 

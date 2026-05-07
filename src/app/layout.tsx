@@ -10,12 +10,12 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "TokenTally — Find out what you're really paying for AI",
-    template: "%s · TokenTally",
+    default: "Snipper — Snip overspend from your AI stack",
+    template: "%s · Snipper",
   },
   description:
     "A free 60-second audit of your AI tool stack. We surface plan-fit issues, cheaper alternatives, and credit-based discounts — with sources for every number.",
-  applicationName: "TokenTally",
+  applicationName: "Snipper",
   keywords: [
     "AI spend audit",
     "Cursor pricing",
@@ -25,16 +25,16 @@ export const metadata: Metadata = {
     "AI cost benchmarking",
   ],
   openGraph: {
-    title: "TokenTally — Find out what you're really paying for AI",
+    title: "Snipper — Snip overspend from your AI stack",
     description:
       "A free 60-second audit of your AI tool stack. Surface plan-fit issues, cheaper alternatives, and credit discounts.",
     url: SITE_URL,
-    siteName: "TokenTally",
+    siteName: "Snipper",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "TokenTally — AI Spend Audit",
+    title: "Snipper — AI Spend Audit",
     description:
       "Free 60-second audit of your AI stack. Defensible reasoning, cited sources, and a plan to cut spend.",
   },

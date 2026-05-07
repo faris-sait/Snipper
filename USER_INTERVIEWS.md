@@ -31,7 +31,7 @@ _The thing that didn't fit your assumption. The contradiction. The detail that w
 
 ### What it changed about my design
 
-_Concrete change to TokenTally — a feature added, removed, deprioritised, or re-framed because of this conversation. If nothing changed, say so honestly: "Validated [X assumption], no design change."_
+_Concrete change to Snipper — a feature added, removed, deprioritised, or re-framed because of this conversation. If nothing changed, say so honestly: "Validated [X assumption], no design change."_
 
 ---
 
@@ -60,7 +60,7 @@ Sent 5 questions about Everything About AI's AI tool subscriptions — which too
 
 ### The most surprising thing they said
 
-I went in assuming someone building an AI startup literally called "Everything About AI" would have a sprawling tool stack — Cursor for code, Claude for writing, ChatGPT for data, maybe v0 or Copilot layered on top. Reality: just Claude Max 20x at $200/mo, nothing else. The pain isn't sprawl across multiple tools — it's that one specific plan, on the one specific vendor, getting more expensive every month. And the reason it's a single tool isn't strategy, it's pure inertia: *"Claude was the first one we tried, never bothered exploring."* That's the inverse of the problem TokenTally was originally scoped around (multi-tool sprawl). Even more interesting: Claude Max 20x is *the* plan that's been generating the loudest public rate-limit-shock complaints in the last 60 days (Anthropic tightened limits post-v2.1.89). So Vineeth's "increasingly expensive" complaint isn't subjective — it's a documented pattern.
+I went in assuming someone building an AI startup literally called "Everything About AI" would have a sprawling tool stack — Cursor for code, Claude for writing, ChatGPT for data, maybe v0 or Copilot layered on top. Reality: just Claude Max 20x at $200/mo, nothing else. The pain isn't sprawl across multiple tools — it's that one specific plan, on the one specific vendor, getting more expensive every month. And the reason it's a single tool isn't strategy, it's pure inertia: *"Claude was the first one we tried, never bothered exploring."* That's the inverse of the problem Snipper was originally scoped around (multi-tool sprawl). Even more interesting: Claude Max 20x is *the* plan that's been generating the loudest public rate-limit-shock complaints in the last 60 days (Anthropic tightened limits post-v2.1.89). So Vineeth's "increasingly expensive" complaint isn't subjective — it's a documented pattern.
 
 ### What it changed about my design
 

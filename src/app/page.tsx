@@ -32,10 +32,10 @@ export default function Home() {
         <Link
           href="/"
           className="font-mono text-base tracking-tight"
-          aria-label="TokenTally home"
+          aria-label="Snipper home"
         >
           <span className="bg-accent text-accent-fg mr-2 inline-block h-5 w-5 rounded-sm align-middle" />
-          token<span className="text-muted-fg">tally</span>
+          snipper
         </Link>
         <nav className="text-muted-fg flex items-center gap-6 text-sm">
           <Link href="#how" className="hover:text-fg transition-colors">
@@ -63,7 +63,7 @@ export default function Home() {
             </h1>
             <p className="text-muted-fg pretty mt-6 max-w-xl text-lg leading-relaxed">
               Most teams pay full retail across five different AI tools and never benchmark.
-              TokenTally takes 60 seconds to surface plan-fit issues, cheaper alternatives, and
+              Snipper takes 60 seconds to surface plan-fit issues, cheaper alternatives, and
               credit-based discounts — with a vendor URL for every number.
             </p>
             <div className="mt-10 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
@@ -182,7 +182,7 @@ export default function Home() {
       <footer className="border-border/60 mx-auto w-full max-w-6xl border-t px-6 py-8 text-sm lg:px-10">
         <div className="text-muted-fg flex flex-col items-start justify-between gap-3 md:flex-row md:items-center">
           <p>
-            © {new Date().getFullYear()} TokenTally · Made for{" "}
+            © {new Date().getFullYear()} Snipper · Made for{" "}
             <a
               className="hover:text-fg underline-offset-4 transition-colors hover:underline"
               href="https://credex.rocks"
