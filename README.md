@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TokenTally
 
-## Getting Started
+A free 60-second AI spend audit. Built for startup founders and engineering managers who pay full retail across five different AI tools and have no benchmark.
 
-First, run the development server:
+> **Project status:** in active development as part of the Credex Round 1 take-home (2026-05-07 → 2026-05-14). See [DEVLOG.md](./DEVLOG.md) for daily progress.
+
+**Live URL:** _will be added when Vercel deploy is wired up._
+
+## Screenshots / demo
+
+_Will be added after Phase 3 (results UI) is shippable._
+
+## Quick start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+cp .env.example .env.local   # fill in credentials as you reach Phases 4 & 5
+pnpm dev                      # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Scripts
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Command            | What it does                         |
+| ------------------ | ------------------------------------ |
+| `pnpm dev`         | Local dev server (Turbopack).        |
+| `pnpm build`       | Production build.                    |
+| `pnpm test`        | Run the audit-engine unit tests.     |
+| `pnpm test:watch`  | Re-run tests on change.              |
+| `pnpm typecheck`   | `tsc --noEmit` — strict mode.        |
+| `pnpm lint`        | ESLint with Next.js + TS rules.      |
+| `pnpm format`      | Prettier across the whole tree.      |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Deploy
 
-## Learn More
+The recommended target is Vercel. The `next build` step in CI pins
+`NEXT_PUBLIC_SITE_URL` so the production OG tags resolve to the deployed
+domain. All other secrets (Supabase, Resend, Anthropic) live in the Vercel
+dashboard — see `.env.example` for the full list.
 
-To learn more about Next.js, take a look at the following resources:
+## Decisions
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Five trade-offs taken so far. The list grows as the project does — see DEVLOG
+for the day-by-day reasoning.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **Next.js 16 (App Router) + Tailwind 4 over Vite + React Router.** I wanted server-rendered OG tags for the shareable URL, server actions for form submits without a client-side fetch wrapper, and a single `vercel deploy` for the full app. Vite would have meant maintaining a separate API server.
+2. **Supabase over a self-hosted Postgres.** RLS, Postgres functions, and the typed JS client get me storage + auth + edge functions in one SDK. The downside is platform lock-in — but for a Round-1 take-home, "ships in a day" wins over "perfectly portable."
+3. **Rules-based audit engine, not an LLM.** The brief explicitly says: hardcoded rules are the right call for the math; AI is for the personalised summary. Rules are testable, explainable, and a finance reviewer can read them. Each rule is a pure function — see `src/lib/audit/rules.ts`.
+4. **Friction-weighted ranking instead of pure-savings ranking.** The first iteration of the engine kept recommending "switch to Copilot" over "downgrade your plan" because raw savings were higher. Real users won't migrate tools for a $20/mo win. I added a `FRICTION_WEIGHT` table so a one-click downgrade beats a tool migration unless the migration is dramatically better.
+5. **Trust user-reported spend over list price.** A line's baseline is whatever the user typed, not `seats × pricePerSeatMonthly`. People have annual discounts, grandfathered rates, or hand-negotiated deals — recomputing from list price would over-recommend savings the user can't actually realise.
 
-## Deploy on Vercel
+## Repo layout
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+src/
+  app/                     # Next.js 16 App Router
+  lib/
+    audit/                 # pure-function audit engine
+      engine.ts            # runAudit() — entry point
+      rules.ts             # individual rules + FRICTION_WEIGHT
+      types.ts
+      __tests__/           # vitest unit tests
+    pricing/
+      tools.ts             # vendor pricing registry (mirrored in PRICING_DATA.md)
+      alternatives.ts      # curated cross-vendor swap rules
+      types.ts
+    utils.ts               # cn() + formatUsd() helpers
+.github/workflows/ci.yml   # lint · typecheck · test · build on every push
+PRICING_DATA.md            # every number cites a vendor pricing-page URL
+ARCHITECTURE.md            # system diagram + 10k-audits/day notes
+DEVLOG.md                  # daily progress, written each evening
+REFLECTION.md              # 5 reflection questions (filled at end of week)
+TESTS.md                   # what each test covers + how to run it
+PROMPTS.md                 # full LLM prompts (Phase 5)
+GTM.md / ECONOMICS.md / METRICS.md / LANDING_COPY.md / USER_INTERVIEWS.md
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## What you're evaluating
+
+This README is paired with [ARCHITECTURE.md](./ARCHITECTURE.md), [DEVLOG.md](./DEVLOG.md), [REFLECTION.md](./REFLECTION.md), [PRICING_DATA.md](./PRICING_DATA.md), and [TESTS.md](./TESTS.md). Each file has its own purpose; together they show the trade-offs and the work, not just the result.
