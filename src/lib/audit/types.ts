@@ -1,4 +1,5 @@
 import type { ToolId, UseCase } from "@/lib/pricing/types";
+import type { PlanHealth } from "./plan-health";
 
 /**
  * One line in the user's spend table: "I'm on Cursor Business with 4 seats,
@@ -40,6 +41,11 @@ export interface Recommendation {
 export interface AuditLineResult {
   line: SpendLine;
   recommendation: Recommendation;
+  /**
+   * Standalone signal about the plan itself (rate-limit risk, annual prepay,
+   * unpublished pricing) — independent of whether a cheaper option exists.
+   */
+  planHealth: PlanHealth;
 }
 
 export interface AuditTotals {

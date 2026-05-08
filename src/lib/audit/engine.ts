@@ -1,4 +1,5 @@
 import { getPlan } from "@/lib/pricing/tools";
+import { classifyPlanHealth } from "./plan-health";
 import { ALL_RULES, FRICTION_WEIGHT, type Rule } from "./rules";
 import type {
   AuditInput,
@@ -25,6 +26,7 @@ export function runAudit(input: AuditInput, rules: Rule[] = ALL_RULES): AuditRes
   const results: AuditLineResult[] = input.lines.map((line) => ({
     line,
     recommendation: pickBest(line, input, rules),
+    planHealth: classifyPlanHealth(line.toolId, line.planId),
   }));
 
   const totals = computeTotals(results);

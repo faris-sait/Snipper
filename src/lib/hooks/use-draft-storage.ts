@@ -50,4 +50,10 @@ export const STORAGE_KEYS = {
   draftForm: "snipper:draft:v1",
   /** Hand-off slot for the most recent audit result, read by /audit/result */
   lastResult: "snipper:last_result:v1",
+  /**
+   * Optimal-path "notify me" signup. Phase 5 will migrate this entry into the
+   * Supabase + transactional-email pipeline; until then we hold it locally so
+   * the lead isn't lost.
+   */
+  notifySignup: "snipper:notify_signup:v1",
 } as const;

@@ -2,21 +2,18 @@
 
 import { ArrowRight, RotateCw } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { AuditLineCard } from "@/components/audit/audit-line-card";
+import { NotifyMeForm } from "@/components/audit/notify-me-form";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AuditResult } from "@/lib/audit/types";
-import { STORAGE_KEYS, loadJson, sessionStorageOrNull } from "@/lib/hooks/use-draft-storage";
-import { TOOLS, getPlan } from "@/lib/pricing/tools";
+import {
+  STORAGE_KEYS,
+  loadJson,
+  sessionStorageOrNull,
+} from "@/lib/hooks/use-draft-storage";
 import { formatUsd } from "@/lib/utils";
-
-const KIND_LABEL: Record<AuditResult["results"][number]["recommendation"]["kind"], string> = {
-  downgrade_plan: "Downgrade plan",
-  switch_tool: "Switch tool",
-  consolidate: "Consolidate",
-  use_credex: "Use Credex credits",
-  optimal: "Already a fit",
-};
 
 export default function AuditResultPage() {
   const [result, setResult] = useState<AuditResult | null | undefined>(undefined);
@@ -33,12 +30,10 @@ export default function AuditResultPage() {
     setResult(stored);
   }, []);
 
+  const flaggedSummary = useMemo(() => summariseFlags(result), [result]);
+
   if (result === undefined) {
-    return (
-      <main className="mx-auto flex w-full max-w-3xl flex-1 items-center justify-center px-6 py-24">
-        <p className="text-muted-fg text-sm">Loading audit…</p>
-      </main>
-    );
+    return <LoadingSkeleton />;
   }
 
   if (result === null) {
@@ -47,15 +42,13 @@ export default function AuditResultPage() {
         <p className="text-muted-fg font-mono text-xs tracking-tight uppercase">
           No audit found
         </p>
-        <h1 className="mt-3 text-3xl font-medium tracking-tight">
-          Run an audit first.
-        </h1>
+        <h1 className="mt-3 text-3xl font-medium tracking-tight">Run an audit first.</h1>
         <Link
           href="/audit"
           className="bg-accent text-accent-fg mt-8 inline-flex h-11 items-center gap-2 rounded-md px-5 text-sm font-medium tracking-tight"
         >
           Start the audit
-          <ArrowRight className="h-4 w-4" />
+          <ArrowRight className="h-4 w-4" aria-hidden />
         </Link>
       </main>
     );
@@ -74,12 +67,12 @@ export default function AuditResultPage() {
           href="/audit"
           className="text-muted-fg hover:text-fg inline-flex items-center gap-1.5 font-mono text-xs tracking-tight transition-colors"
         >
-          <RotateCw className="h-3.5 w-3.5" />
+          <RotateCw className="h-3.5 w-3.5" aria-hidden />
           run another
         </Link>
       </header>
 
-      <Card className="mb-8">
+      <Card className="mb-6">
         <CardBody className="p-8">
           {result.isOptimal ? (
             <>
@@ -90,16 +83,20 @@ export default function AuditResultPage() {
                 Nothing obvious to cut.
               </p>
               <p className="text-muted-fg mt-3 text-base">
-                Your stack looks within range. We&apos;ll let you know if a new optimization
-                applies — drop your email below.
+                Your stack looks within range for a {result.input.primaryUseCase} team.
+                Drop your email and we&apos;ll let you know if a new optimization shows
+                up.
               </p>
+              <div className="mt-6 max-w-md">
+                <NotifyMeForm />
+              </div>
             </>
           ) : (
             <>
               <p className="text-muted-fg font-mono text-xs tracking-tight uppercase">
                 Estimated monthly savings
               </p>
-              <p className="mt-3 text-5xl font-medium tracking-tight md:text-6xl">
+              <p className="mt-3 text-5xl font-medium tracking-tight tabular-nums md:text-6xl">
                 <span className="text-accent">
                   {formatUsd(result.totals.monthlySavingsUsd)}
                 </span>
@@ -116,8 +113,8 @@ export default function AuditResultPage() {
       </Card>
 
       {result.surfaceCredex && (
-        <Card className="bg-accent text-accent-fg mb-8 border-transparent">
-          <CardBody className="p-6 md:flex md:items-center md:justify-between">
+        <Card className="bg-accent text-accent-fg mb-6 border-transparent">
+          <CardBody className="p-6 md:flex md:items-center md:justify-between md:gap-6">
             <div>
               <p className="font-mono text-xs tracking-tight uppercase opacity-80">
                 Highest-leverage move
@@ -131,88 +128,89 @@ export default function AuditResultPage() {
               href="https://credex.rocks"
               target="_blank"
               rel="noreferrer"
-              className="bg-accent-fg text-accent mt-4 inline-flex h-11 items-center gap-2 rounded-md px-4 text-sm font-medium tracking-tight md:mt-0 md:shrink-0"
+              className="bg-accent-fg text-accent mt-4 inline-flex h-11 shrink-0 items-center gap-2 rounded-md px-4 text-sm font-medium tracking-tight md:mt-0"
             >
               Talk to Credex
-              <ArrowRight className="h-4 w-4" />
+              <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
           </CardBody>
         </Card>
       )}
 
+      {flaggedSummary && (
+        <p
+          className="text-muted-fg mb-3 font-mono text-[11px] tracking-tight uppercase"
+          role="status"
+        >
+          {flaggedSummary}
+        </p>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Per-tool breakdown</CardTitle>
+          <p className="text-muted-fg mt-1 text-xs">
+            Tap a row to see the full plan ladder, plan-health note, and source.
+          </p>
         </CardHeader>
-        <CardBody className="space-y-3 pt-3">
-          {result.results.map((line, i) => {
-            const tool = TOOLS[line.line.toolId];
-            const fromPlan = (() => {
-              try {
-                return getPlan(line.line.toolId, line.line.planId);
-              } catch {
-                return null;
-              }
-            })();
-            const toPlan =
-              line.recommendation.toToolId && line.recommendation.toPlanId
-                ? (() => {
-                    try {
-                      return getPlan(
-                        line.recommendation.toToolId,
-                        line.recommendation.toPlanId,
-                      );
-                    } catch {
-                      return null;
-                    }
-                  })()
-                : null;
-            const toTool = line.recommendation.toToolId
-              ? TOOLS[line.recommendation.toToolId]
-              : null;
-
-            return (
-              <div
+        <CardBody className="pt-0">
+          <ol role="list" className="-mx-2">
+            {result.results.map((line, i) => (
+              <li
                 key={`${line.line.toolId}-${line.line.planId}-${i}`}
-                className="border-border/60 flex flex-col gap-3 border-b py-4 last:border-0 last:pb-0 md:flex-row md:items-baseline md:justify-between"
               >
-                <div className="flex-1">
-                  <div className="flex flex-wrap items-baseline gap-x-2">
-                    <p className="font-medium">{tool.displayName}</p>
-                    <p className="text-muted-fg text-xs">
-                      {fromPlan?.vendorPlanName} · {line.line.seats} seat
-                      {line.line.seats === 1 ? "" : "s"}
-                    </p>
-                  </div>
-                  <p className="text-muted-fg pretty mt-1 text-sm leading-relaxed">
-                    <span className="font-medium">
-                      {KIND_LABEL[line.recommendation.kind]}
-                      {toTool && toPlan ? ` → ${toTool.displayName} ${toPlan.vendorPlanName}` : ""}
-                      :{" "}
-                    </span>
-                    {line.recommendation.reason}
-                  </p>
-                </div>
-                <div className="text-right md:shrink-0">
-                  <p className="text-muted-fg font-mono text-[11px] tracking-tight uppercase">
-                    Save / mo
-                  </p>
-                  <p className="font-mono text-base tabular-nums">
-                    {line.recommendation.monthlySavingsUsd > 0
-                      ? formatUsd(line.recommendation.monthlySavingsUsd)
-                      : "—"}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
+                <AuditLineCard
+                  result={line}
+                  primaryUseCase={result.input.primaryUseCase}
+                />
+              </li>
+            ))}
+          </ol>
         </CardBody>
       </Card>
 
       <p className="text-muted-fg mt-8 font-mono text-xs">
-        Pricing verified 2026-05-07. Email capture, share-link, and AI-written summary land in
-        Phases 4 & 5.
+        Pricing verified 2026-05-07. Email capture, share-link, and AI-written summary
+        land in Phases 4 &amp; 5.
       </p>
+    </main>
+  );
+}
+
+function summariseFlags(result: AuditResult | null | undefined): string | null {
+  if (!result) return null;
+  let risk = 0;
+  let watch = 0;
+  for (const r of result.results) {
+    if (r.planHealth.status === "risk") risk += 1;
+    else if (r.planHealth.status === "watch") watch += 1;
+  }
+  if (risk === 0 && watch === 0) return null;
+  const parts: string[] = [];
+  if (risk > 0) parts.push(`${risk} plan${risk === 1 ? "" : "s"} flagged as risk`);
+  if (watch > 0) parts.push(`${watch} to watch`);
+  return parts.join(" · ");
+}
+
+function LoadingSkeleton() {
+  return (
+    <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-12 lg:px-10 lg:py-16">
+      <div className="mb-10 h-3 w-16" />
+      <div
+        role="status"
+        aria-live="polite"
+        className="border-border bg-card animate-pulse rounded-2xl border p-8 motion-reduce:animate-none"
+      >
+        <div className="bg-muted h-3 w-32 rounded" />
+        <div className="bg-muted mt-4 h-12 w-64 rounded" />
+        <div className="bg-muted mt-3 h-3 w-48 rounded" />
+        <span className="sr-only">Loading audit…</span>
+      </div>
+      <div className="border-border bg-card mt-6 animate-pulse rounded-2xl border p-6 motion-reduce:animate-none">
+        <div className="bg-muted h-3 w-40 rounded" />
+        <div className="bg-muted mt-4 h-3 w-3/4 rounded" />
+        <div className="bg-muted mt-2 h-3 w-5/6 rounded" />
+      </div>
     </main>
   );
 }

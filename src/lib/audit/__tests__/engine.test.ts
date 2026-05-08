@@ -127,6 +127,22 @@ describe("runAudit — rule selection", () => {
     }
   });
 
+  it("attaches a planHealth signal to every result line", () => {
+    const result = runAudit(
+      input({
+        lines: [
+          // Heavily-discussed Claude Max 20x → registry says "risk".
+          { toolId: "claude", planId: "max_20x", seats: 1, monthlySpendUsd: 200 },
+          // Plain Cursor Pro → not in registry, defaults to "ok".
+          { toolId: "cursor", planId: "pro", seats: 1, monthlySpendUsd: 20 },
+        ],
+      }),
+    );
+    expect(result.results[0]!.planHealth.status).toBe("risk");
+    expect(result.results[0]!.planHealth.note).toBeDefined();
+    expect(result.results[1]!.planHealth.status).toBe("ok");
+  });
+
   it("aggregates per-line recommendations into a coherent total", () => {
     const result = runAudit(
       input({
