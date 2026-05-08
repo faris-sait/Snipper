@@ -74,29 +74,37 @@ Three concrete changes.
 
 ---
 
-## Interview 3 — _name to be filled_
+## Interview 3 — Sahejad Thariya, Founder & CEO @ AddamCo
 
-**Date:** _to be filled_
-**Format:** _to be filled_
-**Length:** _to be filled_
-**Company stage:** _to be filled_
+**Date:** 2026-05-08
+**Format:** Async messages (same 5-question script as Vineeth, terse replies)
+**Length:** ~15 min
+**Company stage:** _to confirm with Sahejad — answers are consistent with a small/early team_
 
 ### What we talked about
 
-_to be filled_
+Sent the same 5-question script I used with Vineeth: which AI tools they pay for, rough monthly spend, who decides what to add, last time they reviewed the bill, single biggest frustration. Sahejad's a non-engineer founder, so I expected the buying side to look different — and the very first answer surfaced an entire subscription category Snipper currently doesn't model.
 
 ### Direct quotes
 
-> "_quote 1_"
+> "Gemini, ChatGPT, and we do use Kling and Seedance but all in one platform called Freepik"
 
-> "_quote 2_"
+> "I do. But it's like whoever gets the better tool in hand"
 
-> "_quote 3_"
+> "I do not remember" — answer to "last time you compared plans or looked at the bill?"
+
+> "Limited tokens. And an expensive amount of extra tokens"
 
 ### The most surprising thing they said
 
-_to be filled_
+The Freepik bundling. Snipper's pricing registry treats each vendor as a discrete subscription line — a user inputs "ChatGPT, Plus, $20/mo" and the engine looks up ChatGPT's plans. But Sahejad pays *none* of Gemini, ChatGPT, Kling, or Seedance directly — he pays Freepik, which bundles them. There's a whole subscription category I haven't modelled: aggregator platforms (Freepik AI Suite, OpenRouter, Together AI, Genspark, Poe). If aggregators are how under-$500/mo teams normally buy AI — and they probably are, since bundling reduces friction — Snipper's MVP can't honestly audit them. Secondary surprise: he claims he picks tools, then immediately admits "whoever gets the better tool in hand" wins. Same procurement-by-inertia pattern Vineeth described, even more chaotic — there isn't even a "management decides" step.
 
 ### What it changed about my design
 
-_to be filled_
+Three concrete changes.
+
+**Aggregator / bundle tool category.** Phase-4 backlog item: add "Freepik AI Suite" to the pricing registry as a tool with a single bundled plan and an `aggregator: true` tag, so the rules engine doesn't try to recommend a single-vendor downgrade against a bundled total. Trust the user-reported spend; surface the bundle's component vendors so the user can verify what's covered. Same shape later for OpenRouter / Together AI / Poe if interview 4+ confirms this is a real category and not a one-off.
+
+**Token-overage as a first-class Plan Health signal.** Today's plan-health module flags Claude Max 20x for rate-limit shock. Sahejad's pain is the same shape in different vocabulary — "limited tokens, expensive extra tokens." Generalise the registry into a "token-economics" flag for any plan where the *marginal* cost is the real risk, not the base subscription price. The audit reasoning text should call this out explicitly: "your $X base plan looks fine, but overage at $Y/1M tokens is what's making the bill grow."
+
+**Procurement chaos goes into landing copy.** "Whoever gets the better tool in hand" is exactly the buying behaviour the Mint-for-AI-spend pitch needs to name. Pull into LANDING_COPY.md and GTM.md when those land — it's better social proof than a fabricated testimonial.
