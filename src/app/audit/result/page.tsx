@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { AuditLineCard } from "@/components/audit/audit-line-card";
+import { LeadCaptureForm } from "@/components/audit/lead-capture-form";
 import { NotifyMeForm } from "@/components/audit/notify-me-form";
+import { ShareLink } from "@/components/audit/share-link";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AuditResult } from "@/lib/audit/types";
 import {
@@ -17,17 +19,21 @@ import { formatUsd } from "@/lib/utils";
 
 export default function AuditResultPage() {
   const [result, setResult] = useState<AuditResult | null | undefined>(undefined);
+  const [auditId, setAuditId] = useState<string | null>(null);
 
   useEffect(() => {
+    const storage = sessionStorageOrNull();
     const stored = loadJson<AuditResult | null>(
-      sessionStorageOrNull(),
+      storage,
       STORAGE_KEYS.lastResult,
       null,
     );
+    const storedId = loadJson<string | null>(storage, STORAGE_KEYS.lastAuditId, null);
     // One-time hydration from sessionStorage on mount. This *is* the sync
     // boundary with the external store, not avoidable effect-driven state.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setResult(stored);
+    setAuditId(storedId);
   }, []);
 
   const flaggedSummary = useMemo(() => summariseFlags(result), [result]);
@@ -88,7 +94,7 @@ export default function AuditResultPage() {
                 up.
               </p>
               <div className="mt-6 max-w-md">
-                <NotifyMeForm />
+                <NotifyMeForm auditId={auditId} />
               </div>
             </>
           ) : (
@@ -156,9 +162,7 @@ export default function AuditResultPage() {
         <CardBody className="pt-0">
           <ol role="list" className="-mx-2">
             {result.results.map((line, i) => (
-              <li
-                key={`${line.line.toolId}-${line.line.planId}-${i}`}
-              >
+              <li key={`${line.line.toolId}-${line.line.planId}-${i}`}>
                 <AuditLineCard
                   result={line}
                   primaryUseCase={result.input.primaryUseCase}
@@ -169,9 +173,39 @@ export default function AuditResultPage() {
         </CardBody>
       </Card>
 
+      {!result.isOptimal && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>
+              {result.surfaceCredex ? "Get this audit + Credex follow-up" : "Email me my audit"}
+            </CardTitle>
+            <p className="text-muted-fg mt-1 text-xs">
+              We don&apos;t store anything until you ask for the report.
+            </p>
+          </CardHeader>
+          <CardBody className="pt-0">
+            <LeadCaptureForm
+              auditId={auditId}
+              variant={result.surfaceCredex ? "credex" : "report"}
+            />
+          </CardBody>
+        </Card>
+      )}
+
+      {auditId && (
+        <div className="mt-6">
+          <p className="text-muted-fg mb-2 font-mono text-[11px] tracking-tight uppercase">
+            Share this audit
+          </p>
+          <ShareLink auditId={auditId} />
+          <p className="text-muted-fg mt-2 text-xs">
+            Public link strips identifying details — only tools and savings show.
+          </p>
+        </div>
+      )}
+
       <p className="text-muted-fg mt-8 font-mono text-xs">
-        Pricing verified 2026-05-07. Email capture, share-link, and AI-written summary
-        land in Phases 4 &amp; 5.
+        Pricing verified 2026-05-07 · AI-written summary lands in Phase 5.
       </p>
     </main>
   );
