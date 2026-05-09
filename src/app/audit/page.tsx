@@ -4,15 +4,15 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 
+import { runAuditAction } from "@/app/actions/audit";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { runAudit } from "@/lib/audit/engine";
 import {
   AuditFormSchema,
   DEFAULT_FORM_VALUES,
@@ -40,6 +40,11 @@ const USE_CASE_LABELS: Record<(typeof USE_CASES)[number], string> = {
 
 export default function AuditPage() {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  // Honeypot — bots fill every input, humans never see this field. Kept in
+  // component state so it round-trips through the server action call.
+  const [honeypot, setHoneypot] = useState("");
 
   // The form holds the pre-coercion input shape (numbers may arrive as strings
   // from the `<input>` element); zodResolver coerces on submit and we get
@@ -75,9 +80,19 @@ export default function AuditPage() {
   const fieldArray = useFieldArray({ control: form.control, name: "lines" });
 
   const onSubmit = (values: AuditFormValues) => {
-    const result = runAudit(values);
-    saveJson(sessionStorageOrNull(), STORAGE_KEYS.lastResult, result);
-    router.push("/audit/result");
+    setSubmitError(null);
+    startTransition(async () => {
+      const state = await runAuditAction({ input: values, honeypot });
+      if (state.status === "error") {
+        setSubmitError(state.message);
+        return;
+      }
+      // Save the result (and id, if persistence was configured) so /audit/result
+      // can render without re-running the engine.
+      saveJson(sessionStorageOrNull(), STORAGE_KEYS.lastResult, state.result);
+      saveJson(sessionStorageOrNull(), STORAGE_KEYS.lastAuditId, state.auditId);
+      router.push("/audit/result");
+    });
   };
 
   const onChangeTool = (index: number, toolId: ToolId) => {
@@ -263,14 +278,40 @@ export default function AuditPage() {
           </CardBody>
         </Card>
 
+        {/* Honeypot — visually hidden, hidden from assistive tech, only bots fill it. */}
+        <div aria-hidden="true" className="absolute -left-[10000px] top-auto h-px w-px overflow-hidden">
+          <label>
+            Leave this field empty
+            <input
+              type="text"
+              tabIndex={-1}
+              autoComplete="off"
+              value={honeypot}
+              onChange={(e) => setHoneypot(e.target.value)}
+            />
+          </label>
+        </div>
+
         <div className="flex flex-col-reverse items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-muted-fg text-xs">
             We don&apos;t store anything until you ask for the report by email.
           </p>
-          <Button type="submit" size="lg" className="sm:min-w-44">
-            Run my audit
-            <ArrowRight className="h-4 w-4" />
-          </Button>
+          <div className="flex flex-col items-stretch gap-2 sm:items-end">
+            <Button
+              type="submit"
+              size="lg"
+              className="sm:min-w-44"
+              disabled={isPending}
+            >
+              {isPending ? "Running…" : "Run my audit"}
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+            {submitError && (
+              <p role="alert" className="text-warning text-xs">
+                {submitError}
+              </p>
+            )}
+          </div>
         </div>
       </form>
     </main>

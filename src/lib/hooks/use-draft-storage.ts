@@ -51,9 +51,15 @@ export const STORAGE_KEYS = {
   /** Hand-off slot for the most recent audit result, read by /audit/result */
   lastResult: "snipper:last_result:v1",
   /**
-   * Optimal-path "notify me" signup. Phase 5 will migrate this entry into the
-   * Supabase + transactional-email pipeline; until then we hold it locally so
-   * the lead isn't lost.
+   * Companion to lastResult — the persisted audit id, when persistence was
+   * configured at submit time. Used by /audit/result to render the share-link
+   * affordance. Null when the user ran in local-only mode.
+   */
+  lastAuditId: "snipper:last_audit_id:v1",
+  /**
+   * Optimal-path "notify me" fallback. Used when persistence isn't configured
+   * — the form posts to a server action first, this is the local mirror so the
+   * lead isn't lost in dev.
    */
   notifySignup: "snipper:notify_signup:v1",
 } as const;
