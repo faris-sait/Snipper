@@ -9,6 +9,7 @@ import { LeadCaptureForm } from "@/components/audit/lead-capture-form";
 import { NotifyMeForm } from "@/components/audit/notify-me-form";
 import { ShareLink } from "@/components/audit/share-link";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
+import { USE_CASE_PHRASES } from "@/lib/audit/schema";
 import type { AuditResult } from "@/lib/audit/types";
 import {
   STORAGE_KEYS,
@@ -80,7 +81,7 @@ export default function AuditResultPage() {
 
       <Card className="mb-6">
         <CardBody className="p-8">
-          {result.isOptimal ? (
+          {result.totals.monthlySavingsUsd <= 0 ? (
             <>
               <p className="text-muted-fg font-mono text-xs tracking-tight uppercase">
                 You&apos;re spending well
@@ -89,9 +90,31 @@ export default function AuditResultPage() {
                 Nothing obvious to cut.
               </p>
               <p className="text-muted-fg mt-3 text-base">
-                Your stack looks within range for a {result.input.primaryUseCase} team.
-                Drop your email and we&apos;ll let you know if a new optimization shows
-                up.
+                Your stack looks within range for a{" "}
+                {USE_CASE_PHRASES[result.input.primaryUseCase]}{" "}
+                team. Drop your email and we&apos;ll let you know if a new
+                optimization shows up.
+              </p>
+              <div className="mt-6 max-w-md">
+                <NotifyMeForm auditId={auditId} />
+              </div>
+            </>
+          ) : result.isOptimal ? (
+            <>
+              <p className="text-muted-fg font-mono text-xs tracking-tight uppercase">
+                Modest savings
+              </p>
+              <p className="mt-3 text-5xl font-medium tracking-tight tabular-nums md:text-6xl">
+                <span className="text-accent">
+                  {formatUsd(result.totals.monthlySavingsUsd)}
+                </span>
+                <span className="text-muted-fg ml-2 text-2xl font-normal">/mo</span>
+              </p>
+              <p className="text-muted-fg mt-2 text-base">
+                {formatUsd(result.totals.annualSavingsUsd)}{" "}
+                per year — small but real wins on the per-tool list below. Drop
+                your email and we&apos;ll let you know if a bigger optimization
+                shows up.
               </p>
               <div className="mt-6 max-w-md">
                 <NotifyMeForm auditId={auditId} />

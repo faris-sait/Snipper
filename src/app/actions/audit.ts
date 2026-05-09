@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 
 import { runAudit } from "@/lib/audit/engine";
 import { generateAuditId, isWellFormedAuditId } from "@/lib/audit/id";
-import { AuditFormSchema, type AuditFormValues } from "@/lib/audit/schema";
+import { AuditFormSchema } from "@/lib/audit/schema";
 import type { AuditResult } from "@/lib/audit/types";
 import {
   persistAudit,
@@ -89,14 +89,16 @@ export async function captureLeadAction(
   if (args.auditId !== null && !isWellFormedAuditId(args.auditId)) {
     return { status: "error", message: "Bad audit reference." };
   }
-  if (args.kind === "lead" && !args.auditId) {
-    return { status: "error", message: "Lead capture requires an audit." };
-  }
 
   if (!isPersistenceConfigured()) {
     // Local-only mode — caller will fall back to localStorage. We still
-    // return ok so the UI can show the success state.
+    // return ok so the UI can show the success state. The audit-id requirement
+    // only matters when we'd actually persist a row.
     return { status: "ok", persisted: false };
+  }
+
+  if (args.kind === "lead" && !args.auditId) {
+    return { status: "error", message: "Lead capture requires an audit." };
   }
 
   try {
@@ -142,6 +144,3 @@ function nullableTrim(value: string | undefined): string | null {
   const trimmed = value.trim();
   return trimmed.length === 0 ? null : trimmed;
 }
-
-// Re-exports so client components have a typed surface to assert against.
-export type { AuditFormValues };

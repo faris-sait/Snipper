@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { AuditLineCard } from "@/components/audit/audit-line-card";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { isWellFormedAuditId } from "@/lib/audit/id";
+import { USE_CASE_PHRASES } from "@/lib/audit/schema";
 import type { AuditLineResult } from "@/lib/audit/types";
 import { getPublicAudit } from "@/lib/db/audits";
 import { isPersistenceConfigured } from "@/lib/db/supabase";
@@ -90,7 +91,7 @@ export default async function PublicAuditPage({ params }: PageProps) {
 
       <Card className="mb-6">
         <CardBody className="p-8">
-          {result.isOptimal ? (
+          {result.totals.monthlySavingsUsd <= 0 ? (
             <>
               <p className="text-muted-fg font-mono text-xs tracking-tight uppercase">
                 This stack is spending well
@@ -100,7 +101,24 @@ export default async function PublicAuditPage({ params }: PageProps) {
               </p>
               <p className="text-muted-fg mt-3 text-base">
                 Already on the cheapest defensible plans for a{" "}
-                {input.primaryUseCase} team.
+                {USE_CASE_PHRASES[input.primaryUseCase]}{" "}
+                team.
+              </p>
+            </>
+          ) : result.isOptimal ? (
+            <>
+              <p className="text-muted-fg font-mono text-xs tracking-tight uppercase">
+                Modest savings
+              </p>
+              <p className="mt-3 text-5xl font-medium tracking-tight tabular-nums md:text-6xl">
+                <span className="text-accent">
+                  {formatUsd(result.totals.monthlySavingsUsd)}
+                </span>
+                <span className="text-muted-fg ml-2 text-2xl font-normal">/mo</span>
+              </p>
+              <p className="text-muted-fg mt-2 text-base">
+                {formatUsd(result.totals.annualSavingsUsd)}{" "}
+                per year — small but real wins on the per-tool list below.
               </p>
             </>
           ) : (

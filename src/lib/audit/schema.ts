@@ -15,6 +15,15 @@ export const TOOL_IDS = [
 
 export const USE_CASES = ["coding", "writing", "data", "research", "mixed"] as const;
 
+/** Narrative form for "for a {phrase} team" copy on result pages. Lowercase. */
+export const USE_CASE_PHRASES: Record<(typeof USE_CASES)[number], string> = {
+  coding: "coding",
+  writing: "writing",
+  data: "data analysis",
+  research: "research",
+  mixed: "mixed-workload",
+};
+
 const SpendLineSchema = z
   .object({
     toolId: z.enum(TOOL_IDS),

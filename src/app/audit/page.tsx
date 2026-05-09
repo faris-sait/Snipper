@@ -82,16 +82,22 @@ export default function AuditPage() {
   const onSubmit = (values: AuditFormValues) => {
     setSubmitError(null);
     startTransition(async () => {
-      const state = await runAuditAction({ input: values, honeypot });
-      if (state.status === "error") {
-        setSubmitError(state.message);
-        return;
+      try {
+        const state = await runAuditAction({ input: values, honeypot });
+        if (state.status === "error") {
+          setSubmitError(state.message);
+          return;
+        }
+        // Save the result (and id, if persistence was configured) so /audit/result
+        // can render without re-running the engine.
+        saveJson(sessionStorageOrNull(), STORAGE_KEYS.lastResult, state.result);
+        saveJson(sessionStorageOrNull(), STORAGE_KEYS.lastAuditId, state.auditId);
+        router.push("/audit/result");
+      } catch {
+        // Server action threw (network, runtime). Without this, startTransition
+        // swallows the rejection and the user sees a dead button.
+        setSubmitError("Something went wrong running your audit. Please try again.");
       }
-      // Save the result (and id, if persistence was configured) so /audit/result
-      // can render without re-running the engine.
-      saveJson(sessionStorageOrNull(), STORAGE_KEYS.lastResult, state.result);
-      saveJson(sessionStorageOrNull(), STORAGE_KEYS.lastAuditId, state.auditId);
-      router.push("/audit/result");
     });
   };
 
