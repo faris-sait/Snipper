@@ -2,14 +2,17 @@
 
 import { headers } from "next/headers";
 
+import { generateSummary } from "@/lib/ai/summary";
 import { runAudit } from "@/lib/audit/engine";
 import { generateAuditId, isWellFormedAuditId } from "@/lib/audit/id";
 import { AuditFormSchema } from "@/lib/audit/schema";
-import type { AuditResult } from "@/lib/audit/types";
+import type { AuditInput, AuditResult } from "@/lib/audit/types";
 import {
+  getAuditSummary,
   persistAudit,
   persistLead,
   persistNotifySignup,
+  setAuditSummary,
 } from "@/lib/db/audits";
 import { isPersistenceConfigured } from "@/lib/db/supabase";
 
@@ -143,4 +146,67 @@ function nullableTrim(value: string | undefined): string | null {
   if (!value) return null;
   const trimmed = value.trim();
   return trimmed.length === 0 ? null : trimmed;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 5 — AI-generated personalised summary
+// ---------------------------------------------------------------------------
+
+export type SummaryActionState =
+  | {
+      status: "ok";
+      text: string;
+      source: "ai" | "templated";
+      /** True when read straight from the cached audits.ai_summary column. */
+      cached: boolean;
+    }
+  | { status: "error"; message: string };
+
+interface SummaryArgs {
+  auditId: string | null;
+  /**
+   * The audit input + result the result page already has in sessionStorage.
+   * We don't recompute server-side — the engine is pure and the user is the
+   * only consumer of their own summary, so any malformed payload at worst
+   * forces the templated fallback for that one user.
+   */
+  input: AuditInput;
+  result: AuditResult;
+}
+
+/**
+ * Resolve the personalised summary for an audit:
+ *   1. If we have a valid auditId AND persistence: try the cached summary.
+ *   2. Otherwise (or on cache miss): call Claude Haiku 4.5 with a 3s budget,
+ *      falling back to the deterministic templated paragraph on any failure.
+ *   3. On AI success with a valid auditId: cache for next view.
+ *
+ * Templated fallbacks are NOT cached — they're deterministic from input + result,
+ * so caching wouldn't save anything, and skipping the cache lets the next view
+ * try AI again if the prior failure was transient.
+ */
+export async function getOrGenerateSummaryAction(
+  args: SummaryArgs,
+): Promise<SummaryActionState> {
+  const persistAvailable =
+    !!args.auditId &&
+    isWellFormedAuditId(args.auditId) &&
+    isPersistenceConfigured();
+
+  if (persistAvailable) {
+    const cached = await getAuditSummary(args.auditId!).catch(() => null);
+    if (cached) {
+      return { status: "ok", text: cached, source: "ai", cached: true };
+    }
+  }
+
+  const gen = await generateSummary(args.input, args.result);
+
+  if (persistAvailable && gen.source === "ai") {
+    // Best-effort persist; a write failure here just means the next view
+    // re-generates. Don't propagate.
+    await setAuditSummary(args.auditId!, gen.text).catch(() => {});
+  }
+
+  return { status: "ok", text: gen.text, source: gen.source, cached: false };
 }

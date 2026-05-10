@@ -5,10 +5,11 @@ import { notFound } from "next/navigation";
 
 import { AuditLineCard } from "@/components/audit/audit-line-card";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
+import { generateSummary } from "@/lib/ai/summary";
 import { isWellFormedAuditId } from "@/lib/audit/id";
 import { USE_CASE_PHRASES } from "@/lib/audit/schema";
 import type { AuditLineResult } from "@/lib/audit/types";
-import { getPublicAudit } from "@/lib/db/audits";
+import { getPublicAudit, setAuditSummary } from "@/lib/db/audits";
 import { isPersistenceConfigured } from "@/lib/db/supabase";
 import { formatUsd } from "@/lib/utils";
 
@@ -66,6 +67,18 @@ export default async function PublicAuditPage({ params }: PageProps) {
 
   const { result, input } = audit;
   const flagged = summariseFlags(result.results);
+
+  // Phase 5 — render the AI summary inline so shared links never flicker.
+  // First view of a fresh audit pays the (capped) AI call; subsequent views
+  // hit the cached column. Templated fallback handles every error path.
+  let summaryText = audit.ai_summary;
+  if (!summaryText) {
+    const gen = await generateSummary(input, result);
+    summaryText = gen.text;
+    if (gen.source === "ai") {
+      await setAuditSummary(id, gen.text).catch(() => {});
+    }
+  }
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-12 lg:px-10 lg:py-16">
@@ -166,6 +179,15 @@ export default async function PublicAuditPage({ params }: PageProps) {
           </CardBody>
         </Card>
       )}
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Summary</CardTitle>
+        </CardHeader>
+        <CardBody className="pt-0">
+          <p className="text-fg pretty text-[15px] leading-relaxed">{summaryText}</p>
+        </CardBody>
+      </Card>
 
       {flagged && (
         <p className="text-muted-fg mb-3 font-mono text-[11px] tracking-tight uppercase">

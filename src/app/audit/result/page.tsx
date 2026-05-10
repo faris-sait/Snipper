@@ -4,6 +4,7 @@ import { ArrowRight, RotateCw } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import { getOrGenerateSummaryAction } from "@/app/actions/audit";
 import { AuditLineCard } from "@/components/audit/audit-line-card";
 import { LeadCaptureForm } from "@/components/audit/lead-capture-form";
 import { NotifyMeForm } from "@/components/audit/notify-me-form";
@@ -21,6 +22,7 @@ import { formatUsd } from "@/lib/utils";
 export default function AuditResultPage() {
   const [result, setResult] = useState<AuditResult | null | undefined>(undefined);
   const [auditId, setAuditId] = useState<string | null>(null);
+  const [summary, setSummary] = useState<string | null>(null);
 
   useEffect(() => {
     const storage = sessionStorageOrNull();
@@ -36,6 +38,29 @@ export default function AuditResultPage() {
     setResult(stored);
     setAuditId(storedId);
   }, []);
+
+  // Phase 5 — AI summary loads after the page renders so the engine result
+  // is on screen immediately and the model call (or its fallback) drops in
+  // when ready. Templated fallback inside the action means we always end up
+  // with a paragraph, just possibly the deterministic one.
+  useEffect(() => {
+    if (!result) return;
+    let cancelled = false;
+    (async () => {
+      const state = await getOrGenerateSummaryAction({
+        auditId,
+        input: result.input,
+        result,
+      });
+      if (cancelled) return;
+      if (state.status === "ok") {
+        setSummary(state.text);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [result, auditId]);
 
   const flaggedSummary = useMemo(() => summariseFlags(result), [result]);
 
@@ -166,6 +191,19 @@ export default function AuditResultPage() {
         </Card>
       )}
 
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Summary</CardTitle>
+        </CardHeader>
+        <CardBody className="pt-0">
+          {summary ? (
+            <p className="text-fg pretty text-[15px] leading-relaxed">{summary}</p>
+          ) : (
+            <SummarySkeleton />
+          )}
+        </CardBody>
+      </Card>
+
       {flaggedSummary && (
         <p
           className="text-muted-fg mb-3 font-mono text-[11px] tracking-tight uppercase"
@@ -228,9 +266,26 @@ export default function AuditResultPage() {
       )}
 
       <p className="text-muted-fg mt-8 font-mono text-xs">
-        Pricing verified 2026-05-07 · AI-written summary lands in Phase 5.
+        Pricing verified 2026-05-07 · summary written by Claude with a templated
+        fallback if the API errors.
       </p>
     </main>
+  );
+}
+
+function SummarySkeleton() {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="animate-pulse space-y-2 motion-reduce:animate-none"
+    >
+      <div className="bg-muted h-3 w-full rounded" />
+      <div className="bg-muted h-3 w-[96%] rounded" />
+      <div className="bg-muted h-3 w-[92%] rounded" />
+      <div className="bg-muted h-3 w-3/4 rounded" />
+      <span className="sr-only">Generating summary…</span>
+    </div>
   );
 }
 
