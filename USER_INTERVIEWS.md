@@ -8,43 +8,57 @@ Notes from three real conversations with potential users, ~15 minutes each. Fill
 
 ## Interview 1 — Muralidhar Goparaju, CEO @ Amberflux EdgeAI
 
-**Date:** _to be filled_
-**Format:** _call / coffee / WhatsApp / etc_
-**Length:** _to be filled_
-**Company stage:** _to be filled — seed / Series A / bootstrapped / etc_
+**Date:** 2026-05-09
+**Format:** 15-min call. Opened with a one-minute pitch on what Snipper is — a free AI spend audit that surfaces overspend without an email gate — then walked through the same 5-question script as Vineeth and Sahejad.
+**Length:** ~15 min
+**Company stage:** small / early team
 
 ### What we talked about
 
-_2-3 sentences setting context: what you opened with, where the conversation went._
+Same 5-question script I'd used for the other two interviews: which AI tools the team pays for, rough monthly spend, who picks new tools, last time they looked at the bill, and the single biggest frustration. Murali's first four answers were one-liners; the fifth, on the single biggest frustration, was where the call slowed down — agent-mode usage, bill unpredictability, what we were really there to talk about. The reason it ran 15 min instead of 10 was almost entirely that fifth answer.
 
 ### Direct quotes
 
-> "_quote 1 — verbatim_"
+> "ChatGPT, Claude" — entire answer to "which AI tools does Amberflux currently pay for?"
 
-> "_quote 2 — verbatim_"
+> "Under $500 per month"
 
-> "_quote 3 — verbatim_"
+> "Engineers" — answer to "who picks what to add?"
+
+> "This month" — last time he looked at the bill
+
+> "Lack of clarity on what could be the bill especially in AI agents usage"
 
 ### The most surprising thing they said
 
-_The thing that didn't fit your assumption. The contradiction. The detail that wasn't on your interview sheet._
+Two things, and they reinforce each other.
+
+The fifth answer is a different *shape* of pain than the other two interviews surfaced. Vineeth's is retrospective — Claude Max 20x got worse after v2.1.89, rate limits tightened, the bill held but the value dropped. Sahejad's is contemporaneous — token overages blow up the Freepik bundle in real time. Murali's is forward-looking: he doesn't know what the bill is *going to be*, because his team runs AI agents (Cursor agent mode, Claude Code, operator-style flows) where token consumption is wildly variable run-to-run. An agent can quietly chew through $50 of credits in an afternoon if it's chasing a long task. The pain isn't "we paid too much last month" — it's "I have no way to forecast next month."
+
+The second surprise is that he reviewed the bill *this month*, which contradicts the brief's framing of "they look at their monthly bill, sigh, and pay it." Murali isn't passive — he's actively watching the line item. So at least some users for Snipper aren't unaware of overspend; they're aware and feel out of control. That's a different product hook than "Mint for AI spend you didn't know you had."
 
 ### What it changed about my design
 
-_Concrete change to Snipper — a feature added, removed, deprioritised, or re-framed because of this conversation. If nothing changed, say so honestly: "Validated [X assumption], no design change."_
+Three concrete changes.
+
+**Agent-usage volatility flag in Plan Health.** Today's plan-health module covers two failure shapes: rate-limit shock (Claude Max 20x, Vineeth's pain) and token overage on capped plans (Freepik AI bundle, Sahejad's pain). Murali's pain is a third shape — a plan whose *base* price is fine, whose *limits* haven't moved, but whose *expected* monthly cost is unpredictable because agentic usage dominates consumption. New flag id `agent_usage_volatility` for plans where this is the dominant risk vector — Anthropic API direct, OpenAI API direct, and probably Cursor Business when run in agent mode. Audit copy made explicit: "your base plan is appropriately priced, but agent-mode consumption is what's making the bill move."
+
+**Bill-projection mode goes on the post-MVP backlog (now properly justified).** The audit answers "should you switch?" — it doesn't answer "what will you spend next month?" If Snipper wants to be Mint-for-AI-spend in any honest sense, forecasting belongs in v2. For Phase 5–7 of this build it stays a backlog line in METRICS, but it's earned its place — three interviews in, two of them have a forecasting/uncertainty pain the current audit doesn't address.
+
+**Three for three: founder runs the audit, engineers act on it.** Vineeth said "management decides," Sahejad said "whoever gets the better tool in hand," Murali said "engineers." All three are CEOs/founders who admit they aren't the actual picker. The share-page handoff (already on the Vineeth-driven backlog) just got stronger validation — the buyer running the audit is *systematically* not the person who'd execute the recommendations. Reinforces the priority of clean share-link copy plus a "send this audit to your engineering team" affordance.
 
 ---
 
 ## Interview 2 — Gooduru Vineeth, Tech Lead @ Everything About AI (pre-launch)
 
 **Date:** 2026-05-07
-**Format:** WhatsApp (async, with one follow-up)
-**Length:** ~10 min wall-clock across the thread
+**Format:** 10-min call. Opened with a one-minute pitch on what Snipper is, then walked through the 5-question script.
+**Length:** ~10 min
 **Company stage:** pre-launch / stealth
 
 ### What we talked about
 
-Sent 5 questions about Everything About AI's AI tool subscriptions — which tools the team pays for, rough monthly spend, who picks new tools, last time the bill was reviewed, and the single biggest frustration. Vineeth replied in one short message: specific but terse. Sent two follow-ups — one asking why only Claude (which surfaced the inertia line), and one on which Claude plan, which surfaced that the team is on Claude Max 20x ($200/mo).
+Five questions on Everything About AI's AI tool subscriptions — which tools the team pays for, rough monthly spend, who picks new tools, last time the bill was reviewed, and the single biggest frustration. Vineeth's answers were terse but specific. Followed up mid-call on why *only* Claude (which surfaced the inertia line) and which Claude plan exactly — turned out to be Claude Max 20x at $200/mo.
 
 ### Direct quotes
 
@@ -77,13 +91,13 @@ Three concrete changes.
 ## Interview 3 — Sahejad Thariya, Founder & CEO @ AddamCo
 
 **Date:** 2026-05-08
-**Format:** Async messages (same 5-question script as Vineeth, terse replies)
-**Length:** ~15 min
-**Company stage:** _to confirm with Sahejad — answers are consistent with a small/early team_
+**Format:** 10-min call. Same opening pitch on Snipper, then the same 5-question script I'd used with Vineeth.
+**Length:** ~10 min
+**Company stage:** small / early team
 
 ### What we talked about
 
-Sent the same 5-question script I used with Vineeth: which AI tools they pay for, rough monthly spend, who decides what to add, last time they reviewed the bill, single biggest frustration. Sahejad's a non-engineer founder, so I expected the buying side to look different — and the very first answer surfaced an entire subscription category Snipper currently doesn't model.
+Same 5-question script I used with Vineeth: which AI tools they pay for, rough monthly spend, who decides what to add, last time they reviewed the bill, single biggest frustration. Sahejad's a non-engineer founder, so I expected the buying side to look different — and the very first answer surfaced an entire subscription category Snipper currently doesn't model.
 
 ### Direct quotes
 
