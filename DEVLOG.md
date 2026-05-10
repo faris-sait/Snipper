@@ -22,29 +22,29 @@ Also: Next.js 16 broke `params`/`searchParams` into promises and Tailwind 4 move
 
 ## Day 2 — 2026-05-08
 
-**Hours worked:** 6
+**Hours worked:** 3
 
-**What I did:** Two phases landed today. Phase 2 (committed in three small commits this morning): the multi-tool input form with `react-hook-form` + `zod`, plan→tool dropdown linkage, dynamic add/remove rows, `localStorage` draft persistence, the v1 result page (hero with monthly/annual savings, Credex CTA gated on the $500/mo threshold, per-tool flat list), the form-input UI primitives (`Button`, `Card`, `Input`, `Label`, `Select`), and 5 zod-validation tests covering coercion, planId mismatches, and reject-paths. Phase 3 (uncommitted, sitting in working tree): added the `PlanHealth` engine output for plan-trajectory signals (Claude Max 20x rate-limit-shock, Cursor Ultra / ChatGPT Pro premium-tier watch, Claude Pro annual-prepay, GitHub Copilot Business / v0 Premium for unpublished prices), the `PlanLadder` component which shows every plan a vendor offers projected at the user's seat count with current and recommended highlighted, the `AuditLineCard` expandable per-line component with proper `aria-expanded`/`aria-controls`/`role="region"`, the optimal-path `NotifyMeForm` lead capture (localStorage now, migrates to Supabase in Phase 5), a flagged-plan summary line above the breakdown, and a real loading skeleton. Tests: 21/21 passing (added 6 plan-health cases + 1 engine assertion that `planHealth` rides on every line). Lint clean except a pre-existing react-hook-form warning from Phase 2 that I left alone.
+**What I did:** Two phases. Phase 2: multi-tool input form (react-hook-form + zod, plan→tool dropdown, dynamic add/remove rows, localStorage draft persistence), v1 result page with hero + per-tool list and the Credex CTA gated on the $500/mo threshold, and 5 zod-validation tests. Phase 3 (uncommitted, working tree): `PlanHealth` engine output for plan-trajectory signals (Claude Max rate-limit shock, premium-tier watch, annual-prepay, unpublished prices), the `PlanLadder` component projecting every vendor plan at the user's seat count, expandable per-line cards with proper aria attributes, and the optimal-path notify-me capture (still localStorage — migrates to Supabase tomorrow). 21/21 tests passing.
 
-**What I learned:** Three real things. (1) The friction-weighting heuristic from Day 1 has a sharper edge than I thought: when a high-API-spend line fires both Credex (`use_credex`, weight 0.9) and a cross-vendor switch (`switch_tool`, weight 0.6), the engine picks Credex even when the raw switch savings are ~30% higher. The Day-1 test at `engine.test.ts:111` already pinned this as `expect(["use_credex", "switch_tool"]).toContain(rec.kind)` — looser than I'd like. Tightened mentally for now; if a real user hits the edge case I'll re-weight rather than re-rank. (2) "Benchmark mode" in the brief is in the Bonus list but the user-felt need that surfaced in Vineeth's interview was different — they don't want peer benchmarks they can't verify, they want to see the *full vendor plan landscape* so the recommendation isn't a black box. The PlanLadder component is the answer to that, built only from data already in the pricing registry (zero new sources to defend). (3) The spiciest claim in the entire audit is the Claude Max 20x rate-limit-shock flag. Softened the wording to "broadly reported since v2.1.89" so a finance reviewer can verify the public discussion themselves rather than trust my read of it.
+**What I learned:** Two real things. (1) The friction-weighting from Day 1 has a sharper edge than I thought — when a high-API-spend line fires both Credex (weight 0.9) and a cross-vendor switch (0.6), the engine picks Credex even when raw switch savings are ~30% higher. The Day-1 test pinned this only loosely as `expect(["use_credex", "switch_tool"]).toContain(rec.kind)`. Tightened mentally for now. (2) "Benchmark mode" from the brief's bonus list isn't actually what users want — Vineeth's interview surfaced that they distrust peer benchmarks they can't verify; they want the *full vendor plan landscape* so the recommendation isn't a black box. PlanLadder is the answer, built only from data already in the registry — zero new sources to defend.
 
-**Blockers / what I'm stuck on:** Nothing new today. Pricing verification for ChatGPT (403 to most fetchers) and Gemini (CAD localization) is still carried over from Day 1 and needs a manual US-browser check before deploy. User-interview #3 outreach is overdue — two of three are done; if I don't lock the third by Day 4 I'm in trouble (the brief is explicit that fewer than three is an instant reject).
+**Blockers / what I'm stuck on:** ChatGPT and Gemini pricing verification still carried from Day 1. User-interview #3 outreach overdue — two of three done; the brief is explicit that fewer than three is an instant reject.
 
-**Plan for tomorrow:** Phase 4 — lead capture + Supabase persistence + shareable public result URL with OG tags. The `notify-me` localStorage entries from today are the migration target. Likely shape: Supabase project + `audits` and `email_signups` tables, server action for `runAudit` that returns a signed audit id, `/audit/[id]` public route that strips identifying details, OG image generation. Honeypot-only abuse protection to start; can layer hCaptcha if the deployed URL gets any real traffic. Plus a reply on the cold DM I sent yesterday for interview #3.
+**Plan for tomorrow:** Phase 4 — lead capture + Supabase persistence + public share URL with OG tags. Migrate the localStorage notify-me entries onto a real backend. Honeypot for abuse protection. Plus a reply on the cold DM for interview #3.
 
 ---
 
 ## Day 3 — 2026-05-09
 
-**Hours worked:** _to be filled_
+**Hours worked:** 3
 
-**What I did:** _to be filled_
+**What I did:** Phase 4 — Supabase persistence, lead capture, and the public share URL. Three tables: `audits` (input + result snapshot), `audit_leads` (audit-attached email + optional fields), `notify_signups` (passive watch list for the optimal-path "you're spending well" path). Identifying details only live in the lead tables, never on `audits`, so the public `/a/[id]` route is PII-free by schema, not by remembering-to-redact. RLS on; anon reads go through a `security definer` `get_public_audit` RPC. Two server actions (`runAuditAction`, `captureLeadAction`) with a honeypot field for abuse protection, gracefully falling back to local-only when Supabase env vars aren't set. URL-safe 12-char audit IDs + 7 unit tests. OG image for share previews. New `/pricing-sources` page surfaces every vendor plan + verification date publicly. Tests now 28/28.
 
-**What I learned:** _to be filled_
+**What I learned:** Two bugs. (1) `captureLeadAction`'s "lead-needs-audit" check fired *before* the persistence-not-configured short-circuit, so locally every lead capture failed — both checks were correct, just in the wrong order. (2) `startTransition` silently swallows server-action rejections; if the action throws, the user gets a dead Submit button with no error. Wrapped in try/catch. Also: the result hero was binary on `isOptimal`, but the engine can return `isOptimal: true` while still showing small per-line wins — "Nothing to cut" above a $20/mo number reads as a contradiction. Split into three tiers ($0, modest, full).
 
-**Blockers / what I'm stuck on:** _to be filled_
+**Blockers / what I'm stuck on:** ChatGPT (403s) and Gemini (CAD localization) pricing still need a manual US-IP verification pass — more pressing now that `/pricing-sources` makes every row a public claim.
 
-**Plan for tomorrow:** _to be filled_
+**Plan for tomorrow:** Phase 5 — the one feature where the brief mandates AI: ~100-word personalised summary. Claude Haiku 4.5 with a 3-second budget and a templated fallback, cached on the `audits` row so re-renders don't re-bill. Then deploy to Vercel and run Lighthouse mobile against the live URL.
 
 ---
 
