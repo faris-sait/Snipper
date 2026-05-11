@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { getOrGenerateSummaryAction } from "@/app/actions/audit";
+import { SiteLogo } from "@/components/site-logo";
 import { AuditLineCard } from "@/components/audit/audit-line-card";
 import { LeadCaptureForm } from "@/components/audit/lead-capture-form";
 import { NotifyMeForm } from "@/components/audit/notify-me-form";
@@ -89,12 +90,7 @@ export default function AuditResultPage() {
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-12 lg:px-10 lg:py-16">
       <header className="mb-10 flex items-start justify-between gap-4">
-        <Link
-          href="/"
-          className="text-muted-fg hover:text-fg font-mono text-xs tracking-tight transition-colors"
-        >
-          ← back
-        </Link>
+        <SiteLogo size="sm" />
         <Link
           href="/audit"
           className="text-muted-fg hover:text-fg inline-flex items-center gap-1.5 font-mono text-xs tracking-tight transition-colors"

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ArrowRight, FileText, Receipt, Sparkles } from "lucide-react";
 
+import { SiteLogo } from "@/components/site-logo";
+
 const stats = [
   { value: "$0", label: "Cost to run an audit" },
   { value: "60s", label: "Median time to result" },
@@ -29,14 +31,7 @@ export default function Home() {
   return (
     <>
       <header className="border-border/60 mx-auto flex w-full max-w-6xl items-center justify-between border-b px-6 py-5 lg:px-10">
-        <Link
-          href="/"
-          className="font-mono text-base tracking-tight"
-          aria-label="Snipper home"
-        >
-          <span className="bg-accent text-accent-fg mr-2 inline-block h-5 w-5 rounded-sm align-middle" />
-          snipper
-        </Link>
+        <SiteLogo size="md" />
         <nav className="text-muted-fg flex items-center gap-6 text-sm">
           <Link href="#how" className="hover:text-fg transition-colors">
             How it works

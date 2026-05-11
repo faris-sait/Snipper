@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { SiteLogo } from "@/components/site-logo";
 import { AuditLineCard } from "@/components/audit/audit-line-card";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { generateSummary } from "@/lib/ai/summary";
@@ -83,12 +84,7 @@ export default async function PublicAuditPage({ params }: PageProps) {
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-12 lg:px-10 lg:py-16">
       <header className="mb-10 flex items-start justify-between gap-4">
-        <Link
-          href="/"
-          className="text-muted-fg hover:text-fg font-mono text-xs tracking-tight transition-colors"
-        >
-          ← Snipper
-        </Link>
+        <SiteLogo size="sm" />
         <Link
           href="/audit"
           className="text-muted-fg hover:text-fg inline-flex items-center gap-1.5 font-mono text-xs tracking-tight transition-colors"

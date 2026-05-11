@@ -1,7 +1,7 @@
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 
+import { SiteLogo } from "@/components/site-logo";
 import { ALL_TOOLS } from "@/lib/pricing/tools";
 import type { Plan } from "@/lib/pricing/types";
 import { formatUsd } from "@/lib/utils";
@@ -16,13 +16,7 @@ export default function PricingSourcesPage() {
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-12 lg:px-10 lg:py-16">
       <header className="mb-10">
-        <Link
-          href="/"
-          className="text-muted-fg hover:text-fg inline-flex items-center gap-1.5 font-mono text-xs tracking-tight transition-colors"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
-          back
-        </Link>
+        <SiteLogo size="sm" />
         <h1 className="balance mt-4 text-4xl font-medium tracking-tight md:text-5xl">
           Pricing sources.
         </h1>

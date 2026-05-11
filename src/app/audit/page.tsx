@@ -2,12 +2,12 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, Plus, Trash2 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 
 import { runAuditAction } from "@/app/actions/audit";
+import { SiteLogo } from "@/components/site-logo";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -126,12 +126,7 @@ export default function AuditPage() {
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-12 lg:px-10 lg:py-16">
       <header className="mb-10">
-        <Link
-          href="/"
-          className="text-muted-fg hover:text-fg font-mono text-xs tracking-tight transition-colors"
-        >
-          ← back
-        </Link>
+        <SiteLogo size="sm" />
         <h1 className="balance mt-4 text-4xl font-medium tracking-tight md:text-5xl">
           What does your AI stack actually cost?
         </h1>
