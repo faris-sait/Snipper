@@ -9,12 +9,17 @@ import { AuditFormSchema } from "@/lib/audit/schema";
 import type { AuditInput, AuditResult } from "@/lib/audit/types";
 import {
   getAuditSummary,
+  getPublicAudit,
   persistAudit,
   persistLead,
   persistNotifySignup,
   setAuditSummary,
 } from "@/lib/db/audits";
 import { isPersistenceConfigured } from "@/lib/db/supabase";
+import {
+  sendAuditLeadConfirmation,
+  sendNotifyConfirmation,
+} from "@/lib/email/send";
 
 export type RunAuditState =
   | { status: "ok"; auditId: string | null; result: AuditResult }
@@ -116,9 +121,48 @@ export async function captureLeadAction(
     } else {
       await persistNotifySignup({ email, audit_id: args.auditId });
     }
+    // Best-effort confirmation email. Awaited so Vercel doesn't kill the
+    // serverless function mid-send (fire-and-forget needs `waitUntil`, which
+    // adds a dependency we don't otherwise need). `sendXxx` swallows Resend
+    // errors internally — the user always sees `ok` regardless.
+    await fireConfirmationEmail({ kind: args.kind, auditId: args.auditId, email });
     return { status: "ok", persisted: true };
   } catch {
     return { status: "ok", persisted: false };
+  }
+}
+
+/**
+ * Fire-and-forget transactional email after a successful lead/notify persist.
+ * Pulled into its own function so the awaitless call in `captureLeadAction`
+ * stays readable and the lookup-then-send sequence is testable in isolation.
+ *
+ * Safe to call without checking env vars — the underlying `send.ts` skips
+ * gracefully when Resend isn't configured.
+ */
+async function fireConfirmationEmail(args: {
+  kind: CaptureLeadKind;
+  auditId: string | null;
+  email: string;
+}): Promise<void> {
+  try {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+    const shareUrl = args.auditId ? `${siteUrl}/a/${args.auditId}` : null;
+
+    if (args.kind === "lead" && args.auditId) {
+      const audit = await getPublicAudit(args.auditId);
+      if (!audit) return;
+      await sendAuditLeadConfirmation({
+        to: args.email,
+        input: audit.input as unknown as AuditInput,
+        result: audit.result,
+        shareUrl,
+      });
+    } else if (args.kind === "notify") {
+      await sendNotifyConfirmation({ to: args.email, shareUrl });
+    }
+  } catch (err) {
+    console.error("[email] confirmation failed:", err);
   }
 }
 
