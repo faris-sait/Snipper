@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, FileText, Receipt, Sparkles } from "lucide-react";
 
+import { HeroAudit } from "@/components/hero-audit";
 import { SiteLogo } from "@/components/site-logo";
 
 const stats = [
@@ -78,35 +79,7 @@ export default function Home() {
             </div>
           </div>
           <aside className="md:col-span-5">
-            <div className="border-border bg-card relative rounded-2xl border p-6 shadow-sm">
-              <p className="text-muted-fg font-mono text-xs tracking-tight uppercase">
-                Sample audit
-              </p>
-              <p className="mt-2 text-3xl font-medium tracking-tight">
-                You could save{" "}
-                <span className="text-accent">$612</span>
-                <span className="text-muted-fg text-xl font-normal">/mo</span>
-              </p>
-              <p className="text-muted-fg mt-1 text-sm">
-                ${(612 * 12).toLocaleString()} per year · across 4 tools
-              </p>
-              <ul className="mt-6 space-y-3 text-sm">
-                {[
-                  ["Cursor Teams (2 seats)", "→ Cursor Pro", "$40/mo"],
-                  ["ChatGPT Plus", "→ Claude Pro", "$0/mo"],
-                  ["Anthropic API ($1,800/mo)", "→ via Credex credits", "$450/mo"],
-                  ["Copilot Pro+", "→ already a fit", "—"],
-                ].map(([from, to, save]) => (
-                  <li key={from} className="border-border/60 flex items-baseline justify-between border-b pb-3 last:border-0">
-                    <div>
-                      <p className="font-medium">{from}</p>
-                      <p className="text-muted-fg text-xs">{to}</p>
-                    </div>
-                    <span className="text-success font-mono text-sm tabular-nums">{save}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <HeroAudit />
           </aside>
         </section>
 
@@ -188,7 +161,6 @@ export default function Home() {
             </a>
           </p>
           <p className="font-mono text-xs">
-            Pricing verified 2026-05-07 ·{" "}
             <Link className="hover:text-fg underline-offset-4 hover:underline" href="/pricing-sources">
               sources
             </Link>

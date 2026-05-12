@@ -47,3 +47,10 @@ next-env.d.ts
 .claude/
 dogfood-output/
 .env*.local
+
+# vendored clone of heygen-com/hyperframes for local reference; not part of Snipper.
+hyperframes/
+
+# hyperframes render artifacts — composition source is committed under video/, output is regenerable.
+video/**/output.mp4
+video/**/dist/
