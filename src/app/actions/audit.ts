@@ -20,6 +20,7 @@ import {
   sendAuditLeadConfirmation,
   sendNotifyConfirmation,
 } from "@/lib/email/send";
+import { renderAuditReportPdfBuffer } from "@/lib/pdf/render";
 
 export type RunAuditState =
   | { status: "ok"; auditId: string | null; result: AuditResult }
@@ -156,11 +157,41 @@ async function fireConfirmationEmail(args: {
     if (args.kind === "lead" && args.auditId) {
       const audit = await getPublicAudit(args.auditId);
       if (!audit) return;
+
+      const input = audit.input as unknown as AuditInput;
+
+      // Make sure the PDF carries the same AI summary the user saw on
+      // the result page. If the cache is cold (lead captured before the
+      // summary action finished), generate now and persist for future views.
+      let summary = audit.ai_summary;
+      if (!summary) {
+        const gen = await generateSummary(input, audit.result);
+        summary = gen.text;
+        if (gen.source === "ai") {
+          await setAuditSummary(args.auditId, gen.text).catch(() => {});
+        }
+      }
+
+      const pdfBuffer = await renderAuditReportPdfBuffer({
+        input,
+        result: audit.result,
+        summary,
+        auditId: args.auditId,
+        shareUrl,
+        generatedAt: new Date(audit.created_at).toISOString().slice(0, 10),
+      });
+
       await sendAuditLeadConfirmation({
         to: args.email,
-        input: audit.input as unknown as AuditInput,
+        input,
         result: audit.result,
         shareUrl,
+        pdfAttachment: pdfBuffer
+          ? {
+              filename: `snipper-audit-${args.auditId}.pdf`,
+              content: pdfBuffer,
+            }
+          : null,
       });
     } else if (args.kind === "notify") {
       await sendNotifyConfirmation({ to: args.email, shareUrl });

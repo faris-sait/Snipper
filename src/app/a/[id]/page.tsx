@@ -1,4 +1,4 @@
-import { ArrowRight, ArrowUpRight } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Download } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -224,9 +224,13 @@ export default async function PublicAuditPage({ params }: PageProps) {
       </Card>
 
       <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-muted-fg font-mono text-xs">
-          Pricing verified 2026-05-07 · every number cites a vendor source.
-        </p>
+        <a
+          href={`/api/audit/${id}/pdf`}
+          className="border-border bg-card text-fg hover:bg-muted inline-flex h-10 items-center gap-2 rounded-md border px-4 text-sm font-medium tracking-tight transition-colors"
+        >
+          <Download className="h-4 w-4" aria-hidden />
+          Download PDF
+        </a>
         <Link
           href="/audit"
           className="text-muted-fg hover:text-fg inline-flex items-center gap-1.5 font-mono text-xs tracking-tight transition-colors"

@@ -61,6 +61,8 @@ export function renderLeadConfirmation(args: {
     ``,
     credexNote,
     ``,
+    `A PDF copy of the full audit is attached — every recommendation cites a vendor source.`,
+    ``,
     shareUrl ? `Your audit: ${shareUrl}` : `Re-run anytime: https://snipper-alpha.vercel.app/audit`,
     `Pricing sources: https://snipper-alpha.vercel.app/pricing-sources`,
     ``,
@@ -91,7 +93,8 @@ export function renderLeadConfirmation(args: {
       <p style="margin:0 0 24px; font-size:14px; color:#5a5a55;">${escapeHtml(annual)} per year.</p>
       <p style="margin:0 0 12px; font-family:'SFMono-Regular', Menlo, monospace; font-size:11px; letter-spacing:0.04em; text-transform:uppercase; color:#5a5a55;">Top moves</p>
       <ul style="margin:0 0 24px; padding:0 0 0 20px; font-size:14px;">${linesHtml}</ul>
-      <p style="margin:0 0 24px; font-size:14px;">${escapeHtml(credexNote)}</p>
+      <p style="margin:0 0 16px; font-size:14px;">${escapeHtml(credexNote)}</p>
+      <p style="margin:0 0 24px; font-size:13px; color:#5a5a55;">A PDF copy of the full audit is attached — every recommendation cites a vendor source.</p>
       ${
         shareUrl
           ? `<p style="margin:0 0 24px; font-size:14px;"><a href="${escapeHtml(shareUrl)}" style="color:#0d6b4f; text-decoration:underline;">View your audit</a></p>`

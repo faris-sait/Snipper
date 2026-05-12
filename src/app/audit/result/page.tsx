@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, RotateCw } from "lucide-react";
+import { ArrowRight, Download, RotateCw } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
@@ -9,6 +9,7 @@ import { SiteLogo } from "@/components/site-logo";
 import { AuditLineCard } from "@/components/audit/audit-line-card";
 import { LeadCaptureForm } from "@/components/audit/lead-capture-form";
 import { NotifyMeForm } from "@/components/audit/notify-me-form";
+import { PdfDownloadButton } from "@/components/audit/pdf-download-button";
 import { ShareLink } from "@/components/audit/share-link";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { USE_CASE_PHRASES } from "@/lib/audit/schema";
@@ -261,10 +262,28 @@ export default function AuditResultPage() {
         </div>
       )}
 
-      <p className="text-muted-fg mt-8 font-mono text-xs">
-        Pricing verified 2026-05-07 · summary written by Claude with a templated
-        fallback if the API errors.
-      </p>
+      <div className="mt-8 flex flex-wrap items-center gap-3">
+        {auditId ? (
+          <a
+            href={`/api/audit/${auditId}/pdf`}
+            className="border-border bg-card text-fg hover:bg-muted inline-flex h-10 items-center gap-2 rounded-md border px-4 text-sm font-medium tracking-tight transition-colors"
+          >
+            <Download className="h-4 w-4" aria-hidden />
+            Download PDF
+          </a>
+        ) : (
+          <PdfDownloadButton
+            input={result.input}
+            result={result}
+            summary={summary}
+            auditId={null}
+            shareUrl={null}
+          />
+        )}
+        <p className="text-muted-fg text-xs">
+          Hand-off-ready · finance reviewer can read every line without context.
+        </p>
+      </div>
     </main>
   );
 }

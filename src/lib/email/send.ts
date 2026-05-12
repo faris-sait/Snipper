@@ -14,9 +14,15 @@ export type SendStatus =
   | { status: "skipped"; reason: string }
   | { status: "error"; reason: string };
 
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer;
+}
+
 interface SendArgs {
   to: string;
   rendered: RenderedEmail;
+  attachments?: EmailAttachment[];
 }
 
 /**
@@ -25,7 +31,7 @@ interface SendArgs {
  * failing the caller. The lead/notify capture flow is the source of value;
  * email is a confirmation, not a gate.
  */
-async function send({ to, rendered }: SendArgs): Promise<SendStatus> {
+async function send({ to, rendered, attachments }: SendArgs): Promise<SendStatus> {
   if (!isEmailConfigured()) {
     return { status: "skipped", reason: "RESEND env vars not set" };
   }
@@ -43,6 +49,9 @@ async function send({ to, rendered }: SendArgs): Promise<SendStatus> {
       subject: rendered.subject,
       html: rendered.html,
       text: rendered.text,
+      ...(attachments && attachments.length > 0
+        ? { attachments }
+        : {}),
     });
     if (response.error) {
       // Log server-side, return error status — don't propagate.
@@ -65,13 +74,23 @@ export async function sendAuditLeadConfirmation(args: {
   input: AuditInput;
   result: AuditResult;
   shareUrl: string | null;
+  /**
+   * Optional PDF attachment of the full audit. The email path generates this
+   * server-side and passes through; if rendering fails upstream, we send the
+   * confirmation without the attachment rather than failing the flow.
+   */
+  pdfAttachment?: EmailAttachment | null;
 }): Promise<SendStatus> {
   const rendered = renderLeadConfirmation({
     input: args.input,
     result: args.result,
     shareUrl: args.shareUrl,
   });
-  return send({ to: args.to, rendered });
+  return send({
+    to: args.to,
+    rendered,
+    attachments: args.pdfAttachment ? [args.pdfAttachment] : undefined,
+  });
 }
 
 /** Public: confirmation for a notify-me signup on the optimal/modest path. */
