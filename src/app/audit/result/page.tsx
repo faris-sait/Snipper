@@ -7,10 +7,12 @@ import { useEffect, useMemo, useState } from "react";
 import { getOrGenerateSummaryAction } from "@/app/actions/audit";
 import { SiteLogo } from "@/components/site-logo";
 import { AuditLineCard } from "@/components/audit/audit-line-card";
+import { BenchmarkCard } from "@/components/audit/benchmark-card";
 import { LeadCaptureForm } from "@/components/audit/lead-capture-form";
 import { NotifyMeForm } from "@/components/audit/notify-me-form";
 import { PdfDownloadButton } from "@/components/audit/pdf-download-button";
 import { ShareLink } from "@/components/audit/share-link";
+import { compareToBenchmark } from "@/lib/benchmark/compute";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { USE_CASE_PHRASES } from "@/lib/audit/schema";
 import type { AuditResult } from "@/lib/audit/types";
@@ -65,6 +67,10 @@ export default function AuditResultPage() {
   }, [result, auditId]);
 
   const flaggedSummary = useMemo(() => summariseFlags(result), [result]);
+  const benchmark = useMemo(
+    () => (result ? compareToBenchmark(result.input, result) : null),
+    [result],
+  );
 
   if (result === undefined) {
     return <LoadingSkeleton />;
@@ -201,6 +207,8 @@ export default function AuditResultPage() {
         </CardBody>
       </Card>
 
+      {benchmark && <BenchmarkCard comparison={benchmark} voice="first-person" />}
+
       {flaggedSummary && (
         <p
           className="text-muted-fg mb-3 font-mono text-[11px] tracking-tight uppercase"
@@ -253,11 +261,16 @@ export default function AuditResultPage() {
       {auditId && (
         <div className="mt-6">
           <p className="text-muted-fg mb-2 font-mono text-[11px] tracking-tight uppercase">
-            Share this audit
+            Share this audit · referral attribution included
           </p>
-          <ShareLink auditId={auditId} />
+          <ShareLink auditId={auditId} asReferral />
           <p className="text-muted-fg mt-2 text-xs">
-            Public link strips identifying details — only tools and savings show.
+            Public link strips identifying details — only tools and savings show. If a friend audits
+            from this link and clears $500/mo savings, Credex prioritises both of you. See{" "}
+            <Link href="/" className="hover:text-fg underline underline-offset-4">
+              REFERRALS.md
+            </Link>
+            .
           </p>
         </div>
       )}

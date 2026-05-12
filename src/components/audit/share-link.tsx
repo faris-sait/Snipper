@@ -9,6 +9,12 @@ import { cn } from "@/lib/utils";
 interface ShareLinkProps {
   auditId: string;
   className?: string;
+  /**
+   * When true, the copied URL carries `?via=<auditId>` so the referrer
+   * can be credited if the recipient runs their own audit. See
+   * [REFERRALS.md](../../../REFERRALS.md).
+   */
+  asReferral?: boolean;
 }
 
 /**
@@ -16,10 +22,11 @@ interface ShareLinkProps {
  * caller passes `auditId`). Builds the URL on the client so we don't need
  * NEXT_PUBLIC_SITE_URL at render time, which keeps the deployment portable.
  */
-export function ShareLink({ auditId, className }: ShareLinkProps) {
+export function ShareLink({ auditId, className, asReferral = false }: ShareLinkProps) {
   const [copied, setCopied] = useState(false);
-  const url =
+  const base =
     typeof window !== "undefined" ? `${window.location.origin}/a/${auditId}` : `/a/${auditId}`;
+  const url = asReferral ? `${base}?via=${auditId}` : base;
 
   const onCopy = async () => {
     try {

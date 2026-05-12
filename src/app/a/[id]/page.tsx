@@ -5,7 +5,10 @@ import { notFound } from "next/navigation";
 
 import { SiteLogo } from "@/components/site-logo";
 import { AuditLineCard } from "@/components/audit/audit-line-card";
+import { BenchmarkCard } from "@/components/audit/benchmark-card";
+import { ReferralBanner } from "@/components/audit/referral-banner";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
+import { compareToBenchmark } from "@/lib/benchmark/compute";
 import { generateSummary } from "@/lib/ai/summary";
 import { isWellFormedAuditId } from "@/lib/audit/id";
 import { USE_CASE_PHRASES } from "@/lib/audit/schema";
@@ -21,6 +24,7 @@ export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ via?: string | string[] }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -69,8 +73,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default async function PublicAuditPage({ params }: PageProps) {
+export default async function PublicAuditPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const sp = await searchParams;
+  const rawVia = Array.isArray(sp.via) ? sp.via[0] : sp.via;
+  // Only honour `?via=` when it's a canonical 12-char audit id AND points at
+  // a *different* audit than the one being viewed. The length check is
+  // stricter than `isWellFormedAuditId` (which permits 1–32 chars for the
+  // existing audit-id pathway) so fake short strings like `?via=hahaha`
+  // don't trigger a "referred by a Snipper user" banner.
+  const via =
+    rawVia && isWellFormedAuditId(rawVia) && rawVia.length === 12 && rawVia !== id
+      ? rawVia
+      : null;
   if (!isWellFormedAuditId(id)) notFound();
   if (!isPersistenceConfigured()) notFound();
 
@@ -79,6 +94,7 @@ export default async function PublicAuditPage({ params }: PageProps) {
 
   const { result, input } = audit;
   const flagged = summariseFlags(result.results);
+  const benchmark = compareToBenchmark(input, result);
 
   // Phase 5 — render the AI summary inline so shared links never flicker.
   // First view of a fresh audit pays the (capped) AI call; subsequent views
@@ -108,6 +124,8 @@ export default async function PublicAuditPage({ params }: PageProps) {
       <p className="text-muted-fg mb-3 font-mono text-[11px] tracking-tight uppercase">
         Shared audit · {new Date(audit.created_at).toISOString().slice(0, 10)}
       </p>
+
+      {via && <ReferralBanner via={via} />}
 
       <Card className="mb-6">
         <CardBody className="p-8">
@@ -195,6 +213,8 @@ export default async function PublicAuditPage({ params }: PageProps) {
           <p className="text-fg pretty text-[15px] leading-relaxed">{summaryText}</p>
         </CardBody>
       </Card>
+
+      {benchmark && <BenchmarkCard comparison={benchmark} voice="third-person" />}
 
       {flagged && (
         <p className="text-muted-fg mb-3 font-mono text-[11px] tracking-tight uppercase">

@@ -34,6 +34,11 @@ interface RunAuditArgs {
   input: unknown;
   /** Honeypot field — bots fill every input; humans never see it. */
   honeypot?: string;
+  /**
+   * Optional referrer audit ID passed through from a `?via=` query param.
+   * Stored in `request_meta` for attribution. See [REFERRALS.md](../../../REFERRALS.md).
+   */
+  via?: string | null;
 }
 
 export async function runAuditAction(args: RunAuditArgs): Promise<RunAuditState> {
@@ -55,11 +60,20 @@ export async function runAuditAction(args: RunAuditArgs): Promise<RunAuditState>
 
   const id = generateAuditId();
   try {
+    // Mirror the canonical-length guard on `/a/[id]?via=` — anything other
+    // than a 12-char id never persists into `request_meta.referred_by`.
+    const referrer =
+      args.via && isWellFormedAuditId(args.via) && args.via.length === 12
+        ? args.via
+        : null;
     await persistAudit({
       id,
       input: parsed.data,
       result,
-      requestMeta: await collectRequestMeta(),
+      requestMeta: {
+        ...(await collectRequestMeta()),
+        ...(referrer ? { referred_by: referrer } : {}),
+      },
     });
     return { status: "ok", auditId: id, result };
   } catch {

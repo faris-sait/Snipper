@@ -2,8 +2,8 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, Plus, Trash2 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState, useTransition } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 
 import { runAuditAction } from "@/app/actions/audit";
@@ -39,7 +39,17 @@ const USE_CASE_LABELS: Record<(typeof USE_CASES)[number], string> = {
 };
 
 export default function AuditPage() {
+  return (
+    <Suspense fallback={null}>
+      <AuditPageInner />
+    </Suspense>
+  );
+}
+
+function AuditPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const via = searchParams?.get("via") ?? null;
   const [isPending, startTransition] = useTransition();
   const [submitError, setSubmitError] = useState<string | null>(null);
   // Honeypot — bots fill every input, humans never see this field. Kept in
@@ -83,7 +93,7 @@ export default function AuditPage() {
     setSubmitError(null);
     startTransition(async () => {
       try {
-        const state = await runAuditAction({ input: values, honeypot });
+        const state = await runAuditAction({ input: values, honeypot, via });
         if (state.status === "error") {
           setSubmitError(state.message);
           return;
@@ -104,14 +114,54 @@ export default function AuditPage() {
   const onChangeTool = (index: number, toolId: ToolId) => {
     const tool = TOOLS[toolId];
     const currentPlanId = form.getValues(`lines.${index}.planId`);
+    let planId = currentPlanId;
     if (!tool.plans.some((p) => p.id === currentPlanId)) {
       // The previously-selected plan doesn't exist on the new tool; pick the cheapest non-contract plan as a sensible default.
       const fallback =
         tool.plans.find((p) => !p.requiresContract && p.kind !== "free") ?? tool.plans[0];
       if (fallback) {
+        planId = fallback.id;
         form.setValue(`lines.${index}.planId`, fallback.id, { shouldValidate: false });
       }
     }
+    suggestListPriceSpend(index, toolId, planId);
+  };
+
+  /**
+   * Pre-fill the monthly-spend field with the plan's list price × seats whenever
+   * the tool, plan, or seat count changes. The engine still trusts whatever
+   * value is in the form on submit (annual discounts, grandfathered rates, etc.),
+   * but list price is a sensible starting suggestion — users edit if their
+   * actual differs. Usage-billed plans (Anthropic API, OpenAI API) have no
+   * list price; we leave whatever the user has typed.
+   */
+  const suggestListPriceSpend = (
+    index: number,
+    toolId: ToolId,
+    planId: string,
+  ) => {
+    const plan = TOOLS[toolId]?.plans.find((p) => p.id === planId);
+    if (!plan) return;
+    if (plan.kind === "usage") return;
+    const rawSeats = Number(form.getValues(`lines.${index}.seats`)) || 1;
+    const effectiveSeats = Math.max(rawSeats, plan.minSeats ?? 1);
+    const monthly =
+      plan.kind === "free" ? 0 : plan.pricePerSeatMonthly * effectiveSeats;
+    form.setValue(`lines.${index}.monthlySpendUsd`, monthly, {
+      shouldValidate: false,
+    });
+  };
+
+  const onChangePlan = (index: number) => {
+    const toolId = form.getValues(`lines.${index}.toolId`) as ToolId;
+    const planId = form.getValues(`lines.${index}.planId`);
+    suggestListPriceSpend(index, toolId, planId);
+  };
+
+  const onChangeSeats = (index: number) => {
+    const toolId = form.getValues(`lines.${index}.toolId`) as ToolId;
+    const planId = form.getValues(`lines.${index}.planId`);
+    suggestListPriceSpend(index, toolId, planId);
   };
 
   const addLine = () => {
@@ -211,7 +261,12 @@ export default function AuditPage() {
 
                   <div className="space-y-2">
                     <Label htmlFor={`plan-${index}`}>Plan</Label>
-                    <Select id={`plan-${index}`} {...form.register(`lines.${index}.planId`)}>
+                    <Select
+                      id={`plan-${index}`}
+                      {...form.register(`lines.${index}.planId`, {
+                        onChange: () => onChangePlan(index),
+                      })}
+                    >
                       {plans.map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.vendorPlanName}
@@ -230,7 +285,9 @@ export default function AuditPage() {
                       type="number"
                       min={1}
                       inputMode="numeric"
-                      {...form.register(`lines.${index}.seats`)}
+                      {...form.register(`lines.${index}.seats`, {
+                        onChange: () => onChangeSeats(index),
+                      })}
                     />
                     {errors?.seats && (
                       <p className="text-warning text-xs">{errors.seats.message}</p>
@@ -247,9 +304,13 @@ export default function AuditPage() {
                       inputMode="decimal"
                       {...form.register(`lines.${index}.monthlySpendUsd`)}
                     />
-                    {errors?.monthlySpendUsd && (
+                    {errors?.monthlySpendUsd ? (
                       <p className="text-warning text-xs">
                         {errors.monthlySpendUsd.message}
+                      </p>
+                    ) : (
+                      <p className="text-muted-fg text-[11px]">
+                        Pre-filled from list price · edit if your actual differs
                       </p>
                     )}
                   </div>
