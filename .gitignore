@@ -41,16 +41,15 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# agent-browser / skills dev tooling — install state and generated output, not source.
-# skills-lock.json is intentionally NOT ignored; it's the reproducibility lockfile.
+# agent-browser / skills dev tooling — install state, lockfile, and dated dogfood evidence directories.
 .agents/
 .claude/
-dogfood-output/
+skills-lock.json
+dogfood-output*/
 .env*.local
 
 # vendored clone of heygen-com/hyperframes for local reference; not part of Snipper.
 hyperframes/
 
-# hyperframes render artifacts — composition source is committed under video/, output is regenerable.
-video/**/output.mp4
-video/**/dist/
+# hyperframes composition + render artifacts (the rendered .mp4/.webm are committed under public/).
+video/
