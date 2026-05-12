@@ -32,14 +32,25 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!audit) return { title: "Audit not found" };
 
   const { totals, isOptimal } = audit.result;
-  const title = isOptimal
-    ? "AI spend audit: nothing obvious to cut"
-    : `AI spend audit: ${formatUsd(totals.monthlySavingsUsd)}/mo savings (${formatUsd(
-        totals.annualSavingsUsd,
-      )}/yr)`;
-  const description = isOptimal
-    ? "An audit of an AI tool stack — already on the cheapest defensible plans for the use case."
-    : `${formatUsd(totals.monthlySavingsUsd)}/mo of plausible savings on this stack, with a sourced reason for every number.`;
+  // Three tiers, matching the result page hero. Collapsing zero + modest into
+  // one OG state was the source of "OG says nothing-to-cut while body shows
+  // $10/mo savings" — see ISSUE-001 in dogfood-output-2026-05-12/report.md.
+  const tier: "none" | "modest" | "material" =
+    totals.monthlySavingsUsd <= 0 ? "none" : isOptimal ? "modest" : "material";
+  const title =
+    tier === "none"
+      ? "AI spend audit: nothing obvious to cut"
+      : tier === "modest"
+        ? `AI spend audit: ${formatUsd(totals.monthlySavingsUsd)}/mo of small but real wins`
+        : `AI spend audit: ${formatUsd(totals.monthlySavingsUsd)}/mo savings (${formatUsd(
+            totals.annualSavingsUsd,
+          )}/yr)`;
+  const description =
+    tier === "none"
+      ? "An audit of an AI tool stack — already on the cheapest defensible plans for the use case."
+      : tier === "modest"
+        ? `${formatUsd(totals.monthlySavingsUsd)}/mo of defensible, hygiene-grade savings on this stack — small but real, every line sourced.`
+        : `${formatUsd(totals.monthlySavingsUsd)}/mo of plausible savings on this stack, with a sourced reason for every number.`;
 
   return {
     title,

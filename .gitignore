@@ -40,3 +40,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# agent-browser / skills dev tooling — install state and generated output, not source.
+# skills-lock.json is intentionally NOT ignored; it's the reproducibility lockfile.
+.agents/
+.claude/
+dogfood-output/
+.env*.local

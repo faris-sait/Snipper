@@ -105,14 +105,18 @@ export async function captureLeadAction(
     return { status: "ok", persisted: false };
   }
 
-  if (args.kind === "lead" && !args.auditId) {
-    return { status: "error", message: "Lead capture requires an audit." };
-  }
-
   try {
     if (args.kind === "lead") {
+      // Lead capture requires a persisted audit (FK constraint on audit_leads).
+      // If the audit wasn't persisted (transient Supabase failure during the
+      // upstream runAuditAction), gracefully return ok-but-not-persisted so the
+      // user sees the success state instead of a dead-end error. See ISSUE-004
+      // in dogfood-output-2026-05-12/report.md.
+      if (!args.auditId) {
+        return { status: "ok", persisted: false };
+      }
       await persistLead({
-        audit_id: args.auditId!,
+        audit_id: args.auditId,
         email,
         company: nullableTrim(args.company),
         role: nullableTrim(args.role),

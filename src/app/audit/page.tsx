@@ -136,7 +136,11 @@ export default function AuditPage() {
         </p>
       </header>
 
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="space-y-8"
+        noValidate
+      >
         <Card>
           <CardHeader>
             <CardTitle>Your team</CardTitle>

@@ -45,11 +45,20 @@ const SpendLineSchema = z
     }
   });
 
-export const AuditFormSchema = z.object({
-  teamSize: z.coerce.number().int().min(1, "≥1 person").max(10_000),
-  primaryUseCase: z.enum(USE_CASES),
-  lines: z.array(SpendLineSchema).min(1, "Add at least one tool to audit"),
-});
+export const AuditFormSchema = z
+  .object({
+    teamSize: z.coerce.number().int().min(1, "≥1 person").max(10_000),
+    primaryUseCase: z.enum(USE_CASES),
+    lines: z.array(SpendLineSchema).min(1, "Add at least one tool to audit"),
+  })
+  // An all-zero submission technically passes per-line validation but produces
+  // a meaningless "you're spending well" audit. Require at least one line to
+  // have real spend — the audit only makes sense when there's something to
+  // audit. See ISSUE-006 in dogfood-output-2026-05-12/report.md.
+  .refine((data) => data.lines.some((l) => l.monthlySpendUsd > 0), {
+    message: "Add at least one tool with monthly spend above $0",
+    path: ["lines"],
+  });
 
 /** Form-input shape: number fields are pre-coercion (could be string from `<input>`). */
 export type AuditFormInput = z.input<typeof AuditFormSchema>;

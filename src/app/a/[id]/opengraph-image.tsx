@@ -95,7 +95,14 @@ function SavingsHero({
   audit: NonNullable<Awaited<ReturnType<typeof getPublicAudit>>>;
 }) {
   const { totals, isOptimal } = audit.result;
-  if (isOptimal) {
+  // Three tiers, mirroring src/app/audit/result/page.tsx hero. Without this,
+  // modest audits (savings 1–99/mo, isOptimal=true) rendered the zero-savings
+  // "Nothing obvious to cut" image while the body said "$X/mo savings" —
+  // see ISSUE-001 in dogfood-output-2026-05-12/report.md.
+  const tier: "none" | "modest" | "material" =
+    totals.monthlySavingsUsd <= 0 ? "none" : isOptimal ? "modest" : "material";
+
+  if (tier === "none") {
     return (
       <div
         style={{
@@ -132,6 +139,48 @@ function SavingsHero({
       </div>
     );
   }
+
+  if (tier === "modest") {
+    return (
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+        }}
+      >
+        <div style={{ display: "flex", fontSize: 28, color: COLORS.mutedFg }}>
+          Modest savings
+        </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            marginTop: 16,
+          }}
+        >
+          <div style={{ fontSize: 168, fontWeight: 700, color: COLORS.accent, lineHeight: 1 }}>
+            {formatUsd(totals.monthlySavingsUsd)}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              fontSize: 48,
+              color: COLORS.mutedFg,
+              marginLeft: 18,
+            }}
+          >
+            /mo
+          </div>
+        </div>
+        <div style={{ display: "flex", fontSize: 28, marginTop: 18, color: COLORS.mutedFg }}>
+          {formatUsd(totals.annualSavingsUsd)} per year — small but real wins on the per-tool list.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       style={{

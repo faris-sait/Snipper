@@ -58,4 +58,32 @@ describe("AuditFormSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("rejects an audit where every line has $0 monthly spend", () => {
+    // Per-line validation accepts spend: 0, but a whole-audit refinement
+    // requires at least one line with real spend — the audit isn't meaningful
+    // when there's nothing to audit. See ISSUE-006 in
+    // dogfood-output-2026-05-12/report.md.
+    const result = AuditFormSchema.safeParse({
+      teamSize: 3,
+      primaryUseCase: "coding",
+      lines: [
+        { toolId: "cursor", planId: "hobby", seats: 1, monthlySpendUsd: 0 },
+        { toolId: "claude", planId: "free", seats: 1, monthlySpendUsd: 0 },
+      ],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts an audit when at least one line has non-zero spend", () => {
+    const result = AuditFormSchema.safeParse({
+      teamSize: 3,
+      primaryUseCase: "coding",
+      lines: [
+        { toolId: "cursor", planId: "hobby", seats: 1, monthlySpendUsd: 0 },
+        { toolId: "claude", planId: "pro", seats: 1, monthlySpendUsd: 20 },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
 });
