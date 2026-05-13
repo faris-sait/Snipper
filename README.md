@@ -42,7 +42,7 @@ vercel deploy --prod   # ships to https://snipper-alpha.vercel.app/
 
 `.env.example` lists every required var (Supabase, Resend, Anthropic, `NEXT_PUBLIC_SITE_URL`). The same vars must be set in the Vercel dashboard before the first production deploy. CI (`.github/workflows/ci.yml`) runs lint + typecheck + tests on every push to `main`.
 
-## Lighthouse (mobile)
+## Generated Sample Report
 
 ![Lighthouse mobile scores — Performance 98, Accessibility 100, Best Practices 96, SEO 100](./public/screenshots/lighthouse-mobile.png)
 
