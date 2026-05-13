@@ -1,3 +1,5 @@
+import { headers } from "next/headers";
+
 const ROWS = [
   ["Cursor Teams (2 seats)", "→ Cursor Pro", "$40/mo"],
   ["ChatGPT Plus", "→ Claude Pro", "$0/mo"],
@@ -5,11 +7,16 @@ const ROWS = [
   ["Copilot Pro+", "→ already a fit", "—"],
 ] as const;
 
-// Server component — no client JS ships for the landing-page hero. The
-// browser handles video autoplay natively; the static audit preview sits
-// underneath and shows through if the video fails or hasn't loaded yet.
-// Mobile users see only the static card (video is `hidden` below md).
-export function HeroAudit() {
+const MOBILE_UA_RE = /Mobi|Android|iPhone|iPad|iPod|BlackBerry|Opera Mini|IEMobile|Windows Phone/i;
+
+// Server component. The video element is omitted from the HTML response
+// for mobile UAs — Lighthouse mobile (Galaxy S24 UA) never sees the tag,
+// which keeps TBT off the critical path. Real desktop users still get
+// the autoplay hero animation overlaying the static audit-preview card.
+export async function HeroAudit() {
+  const ua = (await headers()).get("user-agent") ?? "";
+  const isMobile = MOBILE_UA_RE.test(ua);
+
   return (
     <div className="border-border bg-card relative aspect-square overflow-hidden rounded-2xl border shadow-sm">
       <div className="absolute inset-0 p-6">
@@ -40,18 +47,20 @@ export function HeroAudit() {
           ))}
         </ul>
       </div>
-      <video
-        className="absolute inset-0 hidden h-full w-full object-cover md:block"
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload="none"
-        poster="/hero-audit-poster.webp"
-      >
-        <source src="/hero-audit.webm" type="video/webm" />
-        <source src="/hero-audit.mp4" type="video/mp4" />
-      </video>
+      {!isMobile ? (
+        <video
+          className="absolute inset-0 h-full w-full object-cover"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="none"
+          poster="/hero-audit-poster.webp"
+        >
+          <source src="/hero-audit.webm" type="video/webm" />
+          <source src="/hero-audit.mp4" type="video/mp4" />
+        </video>
+      ) : null}
     </div>
   );
 }
