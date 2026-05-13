@@ -266,11 +266,7 @@ export default function AuditResultPage() {
           <ShareLink auditId={auditId} asReferral />
           <p className="text-muted-fg mt-2 text-xs">
             Public link strips identifying details — only tools and savings show. If a friend audits
-            from this link and clears $500/mo savings, Credex prioritises both of you. See{" "}
-            <Link href="/" className="hover:text-fg underline underline-offset-4">
-              REFERRALS.md
-            </Link>
-            .
+            from this link and clears $500/mo savings, Credex prioritises both of you.
           </p>
         </div>
       )}
