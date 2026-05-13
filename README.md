@@ -6,10 +6,6 @@ A free 60-second AI spend audit. Built for startup founders and engineering mana
 
 **Live URL:** https://snipper-alpha.vercel.app/
 
-## Demo
-
-[![Watch the walkthrough on Loom](https://cdn.loom.com/sessions/thumbnails/7bc79734f09549a29db69e653946f92a-5651668374086891-full-play.gif)](https://www.loom.com/share/7bc79734f09549a29db69e653946f92a)
-
 **Walkthrough (≈60s):** https://www.loom.com/share/7bc79734f09549a29db69e653946f92a
 
 The recording covers: landing page → audit form (8 tools, smart-fill on plan/seat change) → three-tier results hero → AI-generated summary → per-tool breakdown with sourced recommendations → benchmark card vs same-size teams → Credex prominence at the $500/mo threshold → email capture with PDF attached → public share link with referral attribution.
