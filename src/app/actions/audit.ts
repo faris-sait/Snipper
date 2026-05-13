@@ -36,7 +36,7 @@ interface RunAuditArgs {
   honeypot?: string;
   /**
    * Optional referrer audit ID passed through from a `?via=` query param.
-   * Stored in `request_meta` for attribution. See [REFERRALS.md](../../../REFERRALS.md).
+   * Stored in `request_meta` for attribution.
    */
   via?: string | null;
 }

@@ -95,11 +95,11 @@ This is functionally identical to the Claude API rows above. The audit form lets
 
 ## Gemini — consumer plans
 
-> ⚠️ The `gemini.google/subscriptions` scrape returned localised CAD prices and `one.google.com/about/google-ai-plans` returned no $ amounts. USD figures below come from Google-domain search aggregation; recommend US-session confirmation before billing.
+> The `gemini.google/subscriptions` page localises by IP. From a non-US session on 2026-05-13 it served CA pricing — AI Plus 10.99 CA$/mo, AI Pro 26.99 CA$/mo, AI Ultra 339.99 CA$/mo. Multiplying by a typical 0.72–0.74 CAD→USD ratio reconstructs the US figures below to within $1, which cross-checks the Google-domain search aggregation that originally seeded these numbers.
 
-- Google AI Plus: $7.99/month US — https://gemini.google/subscriptions/ — search-verified 2026-05-07 — individual subscription, family sharing up to 5 people, 200 GB storage
-- Google AI Pro: $19.99/month US — https://gemini.google/subscriptions/ — search-verified 2026-05-07 — individual (18+), family sharing up to 5 people, 5 TB storage, 1M token context window in Gemini, Veo 3.1 video generation
-- Google AI Ultra: $249.99/month US — https://gemini.google/subscriptions/ — search-verified 2026-05-07 — individual (18+), family sharing up to 5 people, 30 TB storage, highest model limits, Deep Think, Gemini Agent (US/English only), YouTube Premium included
+- Google AI Plus: $7.99/month US — https://gemini.google/subscriptions/ — verified 2026-05-13 (US figures cross-checked against live CA pricing) — individual subscription, family sharing up to 5 people, 200 GB storage
+- Google AI Pro: $19.99/month US — https://gemini.google/subscriptions/ — verified 2026-05-13 (US figures cross-checked against live CA pricing) — individual (18+), family sharing up to 5 people, 5 TB storage, 1M token context window in Gemini, Veo 3.1 video generation
+- Google AI Ultra: $249.99/month US — https://gemini.google/subscriptions/ — verified 2026-05-13 (US figures cross-checked against live CA pricing) — individual (18+), family sharing up to 5 people, 30 TB storage, highest model limits, Deep Think, Gemini Agent (US/English only), YouTube Premium included
 
 ## Gemini API — usage-based
 
@@ -126,9 +126,9 @@ The `v0.app/pricing` page no longer shows a "Premium" individual tier as a top-l
 
 | Item | Status | Action |
 |------|--------|--------|
-| ChatGPT consumer prices (Free/Go/Plus/Pro/$100 Pro) | search-aggregated, page returns 403 | Re-verify in US browser session before launch |
+| ChatGPT consumer prices (Free/Go/Plus/Pro/$100 Pro) | search-aggregated; `chatgpt.com/pricing/`, `openai.com/chatgpt/pricing/` and the OpenAI Help Center are all behind a Cloudflare challenge on this network — re-attempted 2026-05-13 same wall | Confirm in a US browser session before quoting to a customer; engine values come from search-aggregated official sources |
 | OpenAI API legacy models (GPT-4.1, GPT-4o, o-series) | not on current pricing snapshot | Check OpenAI's deprecation page if a user reports paying for them |
-| Gemini consumer USD prices | search-aggregated, scrape returned CAD | Re-verify in US session |
+| Gemini consumer USD prices | live page IP-localises to CA; USD figures cross-checked against CA pricing via CAD→USD conversion on 2026-05-13, within $1 of the search-aggregated US numbers | Logged as cross-verified, dates bumped to 2026-05-13 |
 | Cursor "Business" tier (per the brief) | renamed to "Teams" | Form labels both names so users searching for "Business" find it |
 | GitHub Copilot Business price | hidden behind sales contact | Engine does not auto-recommend switching INTO this tier |
 

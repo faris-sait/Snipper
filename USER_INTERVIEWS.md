@@ -2,8 +2,6 @@
 
 Notes from three real conversations with potential users, ~15 minutes each. Filled in after each call while the conversation was still fresh — never reconstructed from memory days later.
 
-> **Filling instructions for me (delete before submitting):** for each interviewee, capture name + role + stage + 3+ direct quotes + the most surprising thing they said + what that changed about the design. Per the brief, this section is one of the strongest signals reviewers read — specificity beats polish.
-
 ---
 
 ## Interview 1 — Muralidhar Goparaju, CEO @ Amberflux EdgeAI

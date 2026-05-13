@@ -11,8 +11,7 @@ interface ShareLinkProps {
   className?: string;
   /**
    * When true, the copied URL carries `?via=<auditId>` so the referrer
-   * can be credited if the recipient runs their own audit. See
-   * [REFERRALS.md](../../../REFERRALS.md).
+   * can be credited if the recipient runs their own audit.
    */
   asReferral?: boolean;
 }

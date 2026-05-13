@@ -3,9 +3,9 @@ import Link from "next/link";
 /**
  * Surfaced on `/a/[id]?via=<referrerAuditId>` to acknowledge a referral
  * and pitch the recipient on running their own audit (carrying the `via`
- * forward so attribution survives the click). The "perk" is documented
- * in [REFERRALS.md](../../../REFERRALS.md) and lives in the Credex
- * relationship — Snipper itself is free, so the loop is pinned upstream.
+ * forward so attribution survives the click). The "perk" lives in the
+ * Credex relationship — Snipper itself is free, so the loop is pinned
+ * upstream.
  */
 export function ReferralBanner({ via }: { via: string }) {
   return (

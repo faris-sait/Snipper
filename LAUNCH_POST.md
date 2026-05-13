@@ -121,8 +121,8 @@ request.
 ## Posting notes
 
 - Best window for HN: weekday 8-10am PT. Title pitches the *category gap*,
-  not the product. Comments will pull on "why hardcoded rules" — see PROMPTS
-  + the AGENTS.md "deliberately not AI" section.
+  not the product. Comments will pull on "why hardcoded rules" — see
+  PROMPTS.md for the "deliberately not AI" rationale.
 - LinkedIn: post the blog form, ditch the emoji, swap the Credex sentence
   for "happy to share the source."
 - X/Twitter: thread above as-is. Pin tweet 9 (the URL).

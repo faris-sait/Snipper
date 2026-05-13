@@ -56,7 +56,7 @@ export function HeroAudit() {
         loop
         playsInline
         preload="metadata"
-        poster="/hero-audit-poster.png"
+        poster="/hero-audit-poster.webp"
         onCanPlay={() => setVideoReady(true)}
       >
         <source src="/hero-audit.webm" type="video/webm" />

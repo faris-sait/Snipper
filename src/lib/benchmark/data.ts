@@ -1,7 +1,6 @@
 /**
  * Benchmark dataset — per-developer monthly AI tool spend, bucketed by team
- * size and weighted by primary use case. Sourcing and methodology are
- * documented in `BENCHMARK_DATA.md`.
+ * size and weighted by primary use case.
  *
  * Numbers are directional estimates derived from public signal (vendor list
  * pricing × typical seat coverage, plus Anthropic / OpenAI usage-billed

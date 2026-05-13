@@ -6,9 +6,15 @@ A free 60-second AI spend audit. Built for startup founders and engineering mana
 
 **Live URL:** https://snipper-alpha.vercel.app/
 
-## Screenshots / demo
+## Demo
 
-_Will be added after Phase 3 (results UI) is shippable._
+[![Watch the walkthrough on Loom](https://cdn.loom.com/sessions/thumbnails/7bc79734f09549a29db69e653946f92a-5651668374086891-full-play.gif)](https://www.loom.com/share/7bc79734f09549a29db69e653946f92a)
+
+**Walkthrough (≈60s):** https://www.loom.com/share/7bc79734f09549a29db69e653946f92a
+
+The recording covers: landing page → audit form (8 tools, smart-fill on plan/seat change) → three-tier results hero → AI-generated summary → per-tool breakdown with sourced recommendations → benchmark card vs same-size teams → Credex prominence at the $500/mo threshold → email capture with PDF attached → public share link with referral attribution.
+
+If the link is unreachable for any reason, the static end-state is rendered at `public/hero-audit-poster.webp` (also the animated hero on the landing page itself — visit `/`).
 
 ## Quick start
 
@@ -32,10 +38,13 @@ pnpm dev                      # http://localhost:3000
 
 ### Deploy
 
-The recommended target is Vercel. The `next build` step in CI pins
-`NEXT_PUBLIC_SITE_URL` so the production OG tags resolve to the deployed
-domain. All other secrets (Supabase, Resend, Anthropic) live in the Vercel
-dashboard — see `.env.example` for the full list.
+```bash
+vercel link            # one-time: connect repo → Vercel project
+vercel env pull        # mirror Vercel env vars into .env.local
+vercel deploy --prod   # ships to https://snipper-alpha.vercel.app/
+```
+
+`.env.example` lists every required var (Supabase, Resend, Anthropic, `NEXT_PUBLIC_SITE_URL`). The same vars must be set in the Vercel dashboard before the first production deploy. CI (`.github/workflows/ci.yml`) runs lint + typecheck + tests on every push to `main`.
 
 ## Decisions
 
