@@ -44,7 +44,7 @@ vercel deploy --prod   # ships to https://snipper-alpha.vercel.app/
 
 ## Generated Sample Report
 
-![Lighthouse mobile scores — Performance 98, Accessibility 100, Best Practices 96, SEO 100](./public/screenshots/lighthouse-mobile.png)
+./public/screenshots/lighthouse-mobile.png)
 
 Run against the live URL on a clean Chrome profile. The brief requires Performance ≥ 85, Accessibility ≥ 90, Best Practices ≥ 90.
 
