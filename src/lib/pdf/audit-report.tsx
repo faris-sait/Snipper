@@ -2,13 +2,20 @@ import {
   Document,
   Link,
   Page,
+  Path,
   StyleSheet,
+  Svg,
   Text,
   View,
 } from "@react-pdf/renderer";
 
 import { USE_CASE_PHRASES } from "@/lib/audit/schema";
 import type { AuditInput, AuditResult } from "@/lib/audit/types";
+import {
+  SNIPPER_ACCENT,
+  SNIPPER_LOGO_PATH,
+  SNIPPER_LOGO_VIEWBOX,
+} from "@/lib/brand";
 import { TOOLS } from "@/lib/pricing/tools";
 import { formatUsd } from "@/lib/utils";
 
@@ -37,6 +44,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "#e3dfd2",
   },
   headerRight: { alignItems: "flex-end" },
+  headerLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
   brand: { fontSize: 16, fontFamily: "Helvetica-Bold" },
   meta: { fontSize: 8, color: "#5a5a52" },
   heroLabel: {
@@ -188,12 +196,21 @@ export function AuditReportPdf({
     >
       <Page size="A4" style={styles.page}>
         <View style={styles.header} fixed>
-          <View>
-            <Text style={styles.brand}>Snipper</Text>
-            <Text style={styles.meta}>
-              AI spend audit · for a {USE_CASE_PHRASES[input.primaryUseCase]} team of{" "}
-              {input.teamSize}
-            </Text>
+          <View style={styles.headerLeft}>
+            <Svg width={28} height={28} viewBox={SNIPPER_LOGO_VIEWBOX}>
+              <Path
+                d={SNIPPER_LOGO_PATH}
+                fill={SNIPPER_ACCENT}
+                fillRule="evenodd"
+              />
+            </Svg>
+            <View>
+              <Text style={styles.brand}>Snipper</Text>
+              <Text style={styles.meta}>
+                AI spend audit · for a {USE_CASE_PHRASES[input.primaryUseCase]} team of{" "}
+                {input.teamSize}
+              </Text>
+            </View>
           </View>
           <View style={styles.headerRight}>
             <Text style={styles.meta}>{date}</Text>
