@@ -1,7 +1,3 @@
-"use client";
-
-import { useState } from "react";
-
 const ROWS = [
   ["Cursor Teams (2 seats)", "→ Cursor Pro", "$40/mo"],
   ["ChatGPT Plus", "→ Claude Pro", "$0/mo"],
@@ -9,17 +5,14 @@ const ROWS = [
   ["Copilot Pro+", "→ already a fit", "—"],
 ] as const;
 
+// Server component — no client JS ships for the landing-page hero. The
+// browser handles video autoplay natively; the static audit preview sits
+// underneath and shows through if the video fails or hasn't loaded yet.
+// Mobile users see only the static card (video is `hidden` below md).
 export function HeroAudit() {
-  const [videoReady, setVideoReady] = useState(false);
-
   return (
     <div className="border-border bg-card relative aspect-square overflow-hidden rounded-2xl border shadow-sm">
-      <div
-        className={`absolute inset-0 p-6 transition-opacity duration-300 ${
-          videoReady ? "opacity-0" : "opacity-100"
-        }`}
-        aria-hidden={videoReady}
-      >
+      <div className="absolute inset-0 p-6">
         <p className="text-muted-fg font-mono text-xs tracking-tight uppercase">
           Sample audit
         </p>
@@ -48,16 +41,13 @@ export function HeroAudit() {
         </ul>
       </div>
       <video
-        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
-          videoReady ? "opacity-100" : "opacity-0"
-        }`}
+        className="absolute inset-0 hidden h-full w-full object-cover md:block"
         autoPlay
         muted
         loop
         playsInline
-        preload="metadata"
+        preload="none"
         poster="/hero-audit-poster.webp"
-        onCanPlay={() => setVideoReady(true)}
       >
         <source src="/hero-audit.webm" type="video/webm" />
         <source src="/hero-audit.mp4" type="video/mp4" />
