@@ -2,8 +2,6 @@
 
 A free 60-second AI spend audit. Built for startup founders and engineering managers who pay full retail across five different AI tools and have no benchmark.
 
-> **Project status:** in active development as part of the Credex Round 1 take-home (2026-05-07 → 2026-05-13). See [DEVLOG.md](./DEVLOG.md) for daily progress.
-
 **Live URL:** https://snipper-alpha.vercel.app/
 
 **Walkthrough (≈60s):** https://www.loom.com/share/7bc79734f09549a29db69e653946f92a
