@@ -42,11 +42,11 @@ vercel deploy --prod   # ships to https://snipper-alpha.vercel.app/
 
 `.env.example` lists every required var (Supabase, Resend, Anthropic, `NEXT_PUBLIC_SITE_URL`). The same vars must be set in the Vercel dashboard before the first production deploy. CI (`.github/workflows/ci.yml`) runs lint + typecheck + tests on every push to `main`.
 
-## Generated Sample Report
+## Sample generated audit report
 
-(/public/screenshots/lighthouse-mobile.png)
+![Sample Snipper audit report — $600/mo savings on a coding team of 5 routed through Credex-sourced Anthropic API credits](./public/screenshots/sample-report.png)
 
-Run against the live URL on a clean Chrome profile. The brief requires Performance ≥ 85, Accessibility ≥ 90, Best Practices ≥ 90.
+The same report is rendered to PDF and attached to the confirmation email after lead capture. Identifying details (company name, email) are stripped from the public share URL — tools, plans, and savings stay visible.
 
 ## Decisions
 
