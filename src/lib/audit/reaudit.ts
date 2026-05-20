@@ -116,7 +116,6 @@ export async function groupAffectedByEmail(
 
   return grouped;
 }
-
 async function listAlreadyNotifiedAuditIds(
   auditIds: string[],
   pricingVersion: string,

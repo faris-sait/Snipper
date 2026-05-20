@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { findAffectedAudits } from "@/lib/audit/reaudit";
+import { findAffectedAudits, groupAffectedByEmail } from "@/lib/audit/reaudit";
+import { deliverGroupedReauditNotifications } from "@/lib/audit/reaudit-delivery";
+import { persistReauditNotifications } from "@/lib/db/audits";
 import { isPersistenceConfigured } from "@/lib/db/supabase";
+import { sendReauditNotification } from "@/lib/email/send";
 import { getEffectiveTools } from "@/lib/pricing/effective";
 
 // Reads pricing_overrides + audits from Supabase and runs the engine — Node
@@ -14,12 +17,12 @@ export const dynamic = "force-dynamic";
  *
  * Bearer-authenticated. Re-runs the audit engine for every stored audit that
  * has a captured pricing_snapshot, against the current effective tools (TOOLS
- * overlaid with pricing_overrides). Returns a count of audits whose total
- * recommendation math would now differ.
+ * overlaid with pricing_overrides). Sends one consolidated email per affected
+ * recipient and writes the reaudit_notifications idempotency rows for the
+ * audits that were actually sent.
  *
- * Phase 3: uses the shared re-audit orchestration so the diffing, idempotency,
- * and eventual email flow all agree on what counts as "affected". Phase 5
- * wires the same helpers into consolidated email notifications.
+ * Phase 5: the same diff/orchestration helpers drive both the count and the
+ * send path, so detect-changes and the rerun UI agree on what changed.
  */
 export async function POST(req: Request): Promise<NextResponse> {
   const auth = req.headers.get("authorization") ?? "";
@@ -34,10 +37,30 @@ export async function POST(req: Request): Promise<NextResponse> {
 
   const effective = await getEffectiveTools();
   const { scanned, affectedAudits } = await findAffectedAudits(effective.tools, effective.version);
+  const grouped = await groupAffectedByEmail(affectedAudits);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const delivery = await deliverGroupedReauditNotifications({
+    grouped: new Map(
+      Array.from(grouped.entries()).map(([email, audits]) => [
+        email,
+        audits.map((audit) => ({ auditId: audit.auditId, diff: audit.diff })),
+      ]),
+    ),
+    pricingVersion: effective.version,
+    siteUrl,
+    sendEmail: sendReauditNotification,
+    persistNotifications: persistReauditNotifications,
+  });
 
   return NextResponse.json({
     scanned,
     affected: affectedAudits.length,
+    recipients: delivery.recipientCount,
+    notifiedRecipients: delivery.notifiedRecipients,
+    skippedRecipients: delivery.skippedRecipients,
+    failedRecipients: delivery.failedRecipients,
+    loggedAudits: delivery.loggedAudits,
+    logErrors: delivery.logErrors,
     pricingVersion: effective.version,
   });
 }

@@ -45,3 +45,7 @@ Committed `feat(round-2): add audit diffing and reaudit orchestration`. Added pu
 ## 2026-05-21 00:30 - Phase 4: re-audit email template
 
 Added the consolidated re-audit email renderer plus sender wrapper. One email now carries 1..N affected audits, each with a short "was X, now Y" summary and a direct `/a/[id]/rerun` link; unsubscribe URL is threaded through as an optional arg for the later bonus path instead of hard-wiring it now. 2 new email-template tests added. Full suite 59/59, typecheck clean, targeted lint clean.
+
+## 2026-05-21 01:30 - Phase 5: detect-changes send path
+
+`POST /api/detect-changes` now groups affected audits by recipient, sends one consolidated re-audit email per user, and writes `reaudit_notifications` only for successful sends. Pulled the send/log loop into a pure `reaudit-delivery.ts` helper so it can be unit-tested without Supabase. 2 new orchestration tests added. Full suite 61/61, typecheck clean, targeted lint clean.

@@ -93,9 +93,7 @@ export async function persistLead(row: {
 }): Promise<void> {
   const sb = getSupabaseService();
   if (!sb) throw new Error("Supabase not configured");
-  const { error } = await sb
-    .from("audit_leads")
-    .upsert(row, { onConflict: "audit_id,email" });
+  const { error } = await sb.from("audit_leads").upsert(row, { onConflict: "audit_id,email" });
   if (error) throw new Error(`persistLead: ${error.message}`);
 }
 
@@ -105,21 +103,36 @@ export async function persistNotifySignup(row: {
 }): Promise<void> {
   const sb = getSupabaseService();
   if (!sb) throw new Error("Supabase not configured");
-  const { error } = await sb
-    .from("notify_signups")
-    .upsert(row, { onConflict: "email" });
+  const { error } = await sb.from("notify_signups").upsert(row, { onConflict: "email" });
   if (error) throw new Error(`persistNotifySignup: ${error.message}`);
+}
+
+export async function persistReauditNotifications(
+  rows: Array<{
+    audit_id: string;
+    pricing_version: string;
+    email: string;
+  }>,
+): Promise<void> {
+  if (rows.length === 0) return;
+
+  const sb = getSupabaseService();
+  if (!sb) throw new Error("Supabase not configured");
+
+  const { error } = await sb
+    .from("reaudit_notifications")
+    .upsert(rows, { onConflict: "audit_id,pricing_version" });
+
+  if (error) {
+    throw new Error(`persistReauditNotifications: ${error.message}`);
+  }
 }
 
 /** Phase 5 — read the cached AI summary off an audit row. Null if not yet generated. */
 export async function getAuditSummary(id: string): Promise<string | null> {
   const sb = getSupabaseService();
   if (!sb) return null;
-  const { data, error } = await sb
-    .from("audits")
-    .select("ai_summary")
-    .eq("id", id)
-    .maybeSingle();
+  const { data, error } = await sb.from("audits").select("ai_summary").eq("id", id).maybeSingle();
   if (error) throw new Error(`getAuditSummary: ${error.message}`);
   return (data?.ai_summary as string | null) ?? null;
 }
@@ -128,9 +141,6 @@ export async function getAuditSummary(id: string): Promise<string | null> {
 export async function setAuditSummary(id: string, summary: string): Promise<void> {
   const sb = getSupabaseService();
   if (!sb) throw new Error("Supabase not configured");
-  const { error } = await sb
-    .from("audits")
-    .update({ ai_summary: summary })
-    .eq("id", id);
+  const { error } = await sb.from("audits").update({ ai_summary: summary }).eq("id", id);
   if (error) throw new Error(`setAuditSummary: ${error.message}`);
 }
