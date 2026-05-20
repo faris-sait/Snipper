@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 
+import { diffAuditResults } from "@/lib/audit/diff";
 import { runAudit } from "@/lib/audit/engine";
 import type { AuditInput } from "@/lib/audit/types";
+import { TOOLS } from "@/lib/pricing/tools";
+import type { Tool, ToolId } from "@/lib/pricing/types";
 
 import {
   renderLeadConfirmation,
   renderNotifyConfirmation,
+  renderReauditNotification,
 } from "../templates";
 
 const HIGH_SAVINGS_INPUT: AuditInput = {
@@ -27,6 +31,23 @@ const MODEST_SAVINGS_INPUT: AuditInput = {
   primaryUseCase: "coding",
   lines: [{ toolId: "cursor", planId: "pro", seats: 1, monthlySpendUsd: 20 }],
 };
+
+function withSeatPrice(
+  base: Record<ToolId, Tool>,
+  toolId: ToolId,
+  planId: string,
+  pricePerSeatMonthly: number,
+): Record<ToolId, Tool> {
+  return {
+    ...base,
+    [toolId]: {
+      ...base[toolId],
+      plans: base[toolId].plans.map((plan) =>
+        plan.id === planId ? { ...plan, pricePerSeatMonthly } : plan,
+      ),
+    },
+  };
+}
 
 describe("renderLeadConfirmation", () => {
   it("puts the formatted monthly savings in the subject line", () => {
@@ -117,5 +138,80 @@ describe("renderNotifyConfirmation", () => {
     // out" / "talk to Credex" copy that belongs only on the lead path.
     expect(email.text).not.toMatch(/credex will|talk to credex/i);
     expect(email.html).not.toMatch(/credex will|talk to credex/i);
+  });
+});
+
+describe("renderReauditNotification", () => {
+  it("renders a single affected audit with a rerun link and old/new recommendation copy", () => {
+    const auditInput: AuditInput = {
+      teamSize: 2,
+      primaryUseCase: "coding",
+      lines: [{ toolId: "cursor", planId: "teams", seats: 2, monthlySpendUsd: 80 }],
+    };
+    const oldResult = runAudit(auditInput);
+    const newResult = runAudit(auditInput, undefined, withSeatPrice(TOOLS, "cursor", "pro", 60));
+
+    const email = renderReauditNotification({
+      siteUrl: "https://snipper.example.com/",
+      items: [
+        {
+          auditId: "abc12345xyzz",
+          diff: diffAuditResults(oldResult, newResult),
+        },
+      ],
+    });
+
+    expect(email.subject).toBe("Pricing changed on 1 of your audits");
+    expect(email.text).toContain("https://snipper.example.com/a/abc12345xyzz/rerun");
+    expect(email.text).toContain("was downgrade to Pro");
+    expect(email.text).toContain("now switch to GitHub Copilot Pro");
+    expect(email.html).toContain("https://snipper.example.com/a/abc12345xyzz/rerun");
+  });
+
+  it("renders multiple audits in one email and includes the unsubscribe link when provided", () => {
+    const recChangeInput: AuditInput = {
+      teamSize: 2,
+      primaryUseCase: "coding",
+      lines: [{ toolId: "cursor", planId: "teams", seats: 2, monthlySpendUsd: 80 }],
+    };
+    const savingsOnlyInput: AuditInput = {
+      teamSize: 5,
+      primaryUseCase: "writing",
+      lines: [
+        {
+          toolId: "claude",
+          planId: "team_standard",
+          seats: 5,
+          monthlySpendUsd: 125,
+        },
+      ],
+    };
+
+    const email = renderReauditNotification({
+      siteUrl: "https://snipper.example.com",
+      items: [
+        {
+          auditId: "abc12345xyzz",
+          diff: diffAuditResults(
+            runAudit(recChangeInput),
+            runAudit(recChangeInput, undefined, withSeatPrice(TOOLS, "cursor", "pro", 60)),
+          ),
+        },
+        {
+          auditId: "def67890lmno",
+          diff: diffAuditResults(
+            runAudit(savingsOnlyInput),
+            runAudit(savingsOnlyInput, undefined, withSeatPrice(TOOLS, "claude", "pro", 22)),
+          ),
+        },
+      ],
+      unsubscribeUrl: "https://snipper.example.com/unsubscribe?token=abc",
+    });
+
+    expect(email.subject).toBe("Pricing changed on 2 of your audits");
+    expect(email.text).toContain("Audit abc12345xyzz");
+    expect(email.text).toContain("Audit def67890lmno");
+    expect(email.text).toContain("https://snipper.example.com/unsubscribe?token=abc");
+    expect(email.html).toContain("https://snipper.example.com/unsubscribe?token=abc");
   });
 });

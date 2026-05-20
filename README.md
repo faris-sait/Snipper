@@ -2,7 +2,7 @@
 
 A free 60-second AI spend audit. Built for startup founders and engineering managers who pay full retail across five different AI tools and have no benchmark.
 
-> **Project status:** in active development as part of the Credex Round 1 take-home (2026-05-07 → 2026-05-13). See [DEVLOG.md](./DEVLOG.md) for daily progress.
+> **Project status:** Round 1 shipped; Round 2 ("re-audit on pricing change") is in active development on `round-2-reaudit`. See [ROUND2_DEVLOG.md](./ROUND2_DEVLOG.md) for current progress and [DEVLOG.md](./DEVLOG.md) for the Round 1 build log.
 
 **Live URL:** https://snipper-alpha.vercel.app/
 
@@ -22,15 +22,15 @@ pnpm dev                      # http://localhost:3000
 
 ### Scripts
 
-| Command            | What it does                         |
-| ------------------ | ------------------------------------ |
-| `pnpm dev`         | Local dev server (Turbopack).        |
-| `pnpm build`       | Production build.                    |
-| `pnpm test`        | Run the audit-engine unit tests.     |
-| `pnpm test:watch`  | Re-run tests on change.              |
-| `pnpm typecheck`   | `tsc --noEmit` — strict mode.        |
-| `pnpm lint`        | ESLint with Next.js + TS rules.      |
-| `pnpm format`      | Prettier across the whole tree.      |
+| Command           | What it does                    |
+| ----------------- | ------------------------------- |
+| `pnpm dev`        | Local dev server (Turbopack).   |
+| `pnpm build`      | Production build.               |
+| `pnpm test`       | Run the full unit-test suite.   |
+| `pnpm test:watch` | Re-run tests on change.         |
+| `pnpm typecheck`  | `tsc --noEmit` — strict mode.   |
+| `pnpm lint`       | ESLint with Next.js + TS rules. |
+| `pnpm format`     | Prettier across the whole tree. |
 
 ### Deploy
 

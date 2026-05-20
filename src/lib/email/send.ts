@@ -4,8 +4,10 @@ import type { AuditInput, AuditResult } from "@/lib/audit/types";
 
 import { getFromAddress, getResend, isEmailConfigured } from "./client";
 import {
+  renderReauditNotification,
   renderLeadConfirmation,
   renderNotifyConfirmation,
+  type ReauditNotificationItem,
   type RenderedEmail,
 } from "./templates";
 
@@ -49,9 +51,7 @@ async function send({ to, rendered, attachments }: SendArgs): Promise<SendStatus
       subject: rendered.subject,
       html: rendered.html,
       text: rendered.text,
-      ...(attachments && attachments.length > 0
-        ? { attachments }
-        : {}),
+      ...(attachments && attachments.length > 0 ? { attachments } : {}),
     });
     if (response.error) {
       // Log server-side, return error status — don't propagate.
@@ -99,5 +99,20 @@ export async function sendNotifyConfirmation(args: {
   shareUrl: string | null;
 }): Promise<SendStatus> {
   const rendered = renderNotifyConfirmation({ shareUrl: args.shareUrl });
+  return send({ to: args.to, rendered });
+}
+
+/** Public: consolidated pricing-change notification for saved audits. */
+export async function sendReauditNotification(args: {
+  to: string;
+  siteUrl: string;
+  items: ReauditNotificationItem[];
+  unsubscribeUrl?: string | null;
+}): Promise<SendStatus> {
+  const rendered = renderReauditNotification({
+    siteUrl: args.siteUrl,
+    items: args.items,
+    unsubscribeUrl: args.unsubscribeUrl,
+  });
   return send({ to: args.to, rendered });
 }

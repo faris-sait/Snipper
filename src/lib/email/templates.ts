@@ -1,10 +1,6 @@
 import { USE_CASE_PHRASES } from "@/lib/audit/schema";
-import type {
-  AuditInput,
-  AuditLineResult,
-  AuditResult,
-  Recommendation,
-} from "@/lib/audit/types";
+import type { AuditDiff, LineDiff } from "@/lib/audit/diff";
+import type { AuditInput, AuditLineResult, AuditResult, Recommendation } from "@/lib/audit/types";
 import type { ToolId } from "@/lib/pricing/types";
 import { getPlan, getTool } from "@/lib/pricing/tools";
 import { formatUsd } from "@/lib/utils";
@@ -13,6 +9,11 @@ export interface RenderedEmail {
   subject: string;
   html: string;
   text: string;
+}
+
+export interface ReauditNotificationItem {
+  auditId: string;
+  diff: AuditDiff;
 }
 
 /**
@@ -116,9 +117,7 @@ export function renderLeadConfirmation(args: {
  * materially changes"), and never pitches Credex — that's the whole point of
  * the notify path being separate from the lead path.
  */
-export function renderNotifyConfirmation(args: {
-  shareUrl: string | null;
-}): RenderedEmail {
+export function renderNotifyConfirmation(args: { shareUrl: string | null }): RenderedEmail {
   const subject = `You're on the watchlist · Snipper`;
 
   const text = [
@@ -128,7 +127,9 @@ export function renderNotifyConfirmation(args: {
     ``,
     `That's it. No newsletter, no drip campaign.`,
     ``,
-    args.shareUrl ? `Your audit: ${args.shareUrl}` : `Re-run anytime: https://snipper-alpha.vercel.app/audit`,
+    args.shareUrl
+      ? `Your audit: ${args.shareUrl}`
+      : `Re-run anytime: https://snipper-alpha.vercel.app/audit`,
     ``,
     `— Snipper`,
   ].join("\n");
@@ -157,17 +158,157 @@ export function renderNotifyConfirmation(args: {
   return { subject, html, text };
 }
 
-function topActionableLines(
-  result: AuditResult,
-  n: number,
-): AuditLineResult[] {
+/**
+ * Consolidated pricing-change email: one recipient may have multiple stored
+ * audits affected by the same pricing version, so we send one message with a
+ * short summary per audit and a direct link to the rerun diff view.
+ */
+export function renderReauditNotification(args: {
+  siteUrl: string;
+  items: ReauditNotificationItem[];
+  unsubscribeUrl?: string | null;
+}): RenderedEmail {
+  const count = args.items.length;
+  const baseUrl = normaliseSiteUrl(args.siteUrl);
+  const subject = `Pricing changed on ${count} of your audits`;
+
+  const textItems = args.items.map((item) => renderReauditItemText(item, baseUrl)).join("\n\n");
+
+  const text = [
+    `Hi,`,
+    ``,
+    count === 1
+      ? `Pricing changed on one of the audits you're tracking with Snipper.`
+      : `Pricing changed on ${count} of the audits you're tracking with Snipper.`,
+    `We re-ran each saved stack against current pricing and found these changes:`,
+    ``,
+    textItems,
+    ``,
+    args.unsubscribeUrl
+      ? `Stop these alerts: ${args.unsubscribeUrl}`
+      : `You're receiving this because you asked Snipper to watch these audits for pricing changes.`,
+    ``,
+    `— Snipper`,
+  ].join("\n");
+
+  const htmlItems = args.items.map((item) => renderReauditItemHtml(item, baseUrl)).join("");
+
+  const html = `
+<!doctype html>
+<html lang="en"><body style="margin:0; padding:0; background:#fbfaf6; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color:#0f0f0d; line-height:1.5;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px; margin:0 auto; padding:32px 24px;">
+    <tr><td>
+      <p style="margin:0 0 24px; font-family:'SFMono-Regular', Menlo, monospace; font-size:14px; letter-spacing:-0.01em;">snipper</p>
+      <h1 style="margin:0 0 12px; font-size:28px; font-weight:600; letter-spacing:-0.02em;">Pricing moved on your saved audits.</h1>
+      <p style="margin:0 0 24px; font-size:15px; color:#5a5a55;">${escapeHtml(
+        count === 1
+          ? `We re-ran one saved audit against current pricing.`
+          : `We re-ran ${count} saved audits against current pricing.`,
+      )}</p>
+      ${htmlItems}
+      <p style="margin:32px 0 0; font-size:12px; color:#5a5a55; border-top:1px solid #e7e5dd; padding-top:16px;">
+        ${
+          args.unsubscribeUrl
+            ? `<a href="${escapeHtml(args.unsubscribeUrl)}" style="color:#5a5a55;">Unsubscribe from these alerts</a> · `
+            : ""
+        }Made for <a href="https://credex.rocks" style="color:#5a5a55;">credex.rocks</a>
+      </p>
+    </td></tr>
+  </table>
+</body></html>`.trim();
+
+  return { subject, html, text };
+}
+
+function topActionableLines(result: AuditResult, n: number): AuditLineResult[] {
   return result.results
     .filter((r) => r.recommendation.kind !== "optimal")
-    .sort(
-      (a, b) =>
-        b.recommendation.monthlySavingsUsd - a.recommendation.monthlySavingsUsd,
-    )
+    .sort((a, b) => b.recommendation.monthlySavingsUsd - a.recommendation.monthlySavingsUsd)
     .slice(0, n);
+}
+
+function renderReauditItemText(item: ReauditNotificationItem, siteUrl: string): string {
+  const rerunUrl = `${siteUrl}/a/${item.auditId}/rerun`;
+  const changedLines = changedLineSummaries(item.diff)
+    .map((line) => `- ${line}`)
+    .join("\n");
+
+  return [
+    `Audit ${item.auditId}`,
+    formatTotalsSummary(item.diff),
+    `What changed:`,
+    changedLines,
+    `Compare: ${rerunUrl}`,
+  ].join("\n");
+}
+
+function renderReauditItemHtml(item: ReauditNotificationItem, siteUrl: string): string {
+  const rerunUrl = `${siteUrl}/a/${item.auditId}/rerun`;
+  const changedLines = changedLineSummaries(item.diff)
+    .map((line) => `<li style="margin:0 0 8px 0;">${escapeHtml(line)}</li>`)
+    .join("");
+
+  return `
+      <div style="margin:0 0 20px; padding:20px; border:1px solid #e7e5dd; border-radius:16px; background:#fffdf8;">
+        <p style="margin:0 0 6px; font-family:'SFMono-Regular', Menlo, monospace; font-size:11px; letter-spacing:0.04em; text-transform:uppercase; color:#5a5a55;">Audit ${escapeHtml(item.auditId)}</p>
+        <p style="margin:0 0 12px; font-size:15px; font-weight:600;">${escapeHtml(formatTotalsSummary(item.diff))}</p>
+        <ul style="margin:0 0 16px; padding:0 0 0 20px; font-size:14px; color:#0f0f0d;">${changedLines}</ul>
+        <p style="margin:0;"><a href="${escapeHtml(rerunUrl)}" style="color:#0d6b4f; text-decoration:underline; font-size:14px;">Compare old vs new audit</a></p>
+      </div>`;
+}
+
+function changedLineSummaries(diff: AuditDiff): string[] {
+  return diff.lines
+    .filter((line) => line.kind !== "unchanged")
+    .slice(0, 3)
+    .map((line) => summariseLineDiff(line));
+}
+
+function summariseLineDiff(line: LineDiff): string {
+  const current = line.oldLineResult ?? line.newLineResult;
+  if (!current) {
+    return "A recommendation changed.";
+  }
+
+  const label = `${getTool(current.line.toolId).displayName} ${planName(
+    current.line.toolId,
+    current.line.planId,
+  )}`;
+
+  if (line.kind === "recommendation_changed") {
+    return `${label}: was ${describeLineRecommendation(line.oldLineResult)}, now ${describeLineRecommendation(line.newLineResult)}.`;
+  }
+
+  return `${label}: still ${describeLineRecommendation(line.newLineResult)}, but savings moved from ${formatSavings(line.oldLineResult)} to ${formatSavings(line.newLineResult)}.`;
+}
+
+function describeLineRecommendation(line: AuditLineResult | null): string {
+  if (!line) return "no recommendation";
+  return describeRecDetailed(line.recommendation, line.line.toolId);
+}
+
+function formatTotalsSummary(diff: AuditDiff): string {
+  const oldSavings = `${formatUsd(diff.totals.oldSavings)}/mo`;
+  const newSavings = `${formatUsd(diff.totals.newSavings)}/mo`;
+  const delta = diff.totals.deltaSavings;
+
+  if (diff.totals.signal === "same") {
+    return `Estimated savings stayed at ${newSavings}, but the recommendation changed.`;
+  }
+
+  return `Estimated savings ${delta > 0 ? "increased" : "decreased"} from ${oldSavings} to ${newSavings} (${formatSignedUsd(delta)}/mo).`;
+}
+
+function formatSavings(line: AuditLineResult | null): string {
+  return line ? `${formatUsd(line.recommendation.monthlySavingsUsd)}/mo` : "$0/mo";
+}
+
+function formatSignedUsd(amount: number): string {
+  return `${amount > 0 ? "+" : ""}${formatUsd(amount)}`;
+}
+
+function normaliseSiteUrl(siteUrl: string): string {
+  return siteUrl.replace(/\/+$/, "");
 }
 
 function describeRec(rec: Recommendation, fromToolId: ToolId): string {
@@ -179,6 +320,28 @@ function describeRec(rec: Recommendation, fromToolId: ToolId): string {
     case "switch_tool": {
       const target = rec.toToolId ? getTool(rec.toToolId).displayName : null;
       return target ? `switch to ${target}` : "switch tool";
+    }
+    case "consolidate":
+      return "consolidate into existing stack";
+    case "use_credex":
+      return "via discounted Credex credits";
+    case "optimal":
+      return "no change";
+  }
+}
+
+function describeRecDetailed(rec: Recommendation, fromToolId: ToolId): string {
+  switch (rec.kind) {
+    case "downgrade_plan": {
+      const target = rec.toPlanId ? planName(fromToolId, rec.toPlanId) : null;
+      return target ? `downgrade to ${target}` : "downgrade plan";
+    }
+    case "switch_tool": {
+      const tool = rec.toToolId ? getTool(rec.toToolId).displayName : null;
+      const plan = rec.toToolId && rec.toPlanId ? planName(rec.toToolId, rec.toPlanId) : null;
+      if (tool && plan) return `switch to ${tool} ${plan}`;
+      if (tool) return `switch to ${tool}`;
+      return "switch tool";
     }
     case "consolidate":
       return "consolidate into existing stack";

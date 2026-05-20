@@ -41,3 +41,7 @@ POST + DELETE `/api/admin/pricing` with bearer-auth + Zod validation. Upserts an
 ## 2026-05-20 23:30 - Phase 3: diffing + re-audit orchestration
 
 Committed `feat(round-2): add audit diffing and reaudit orchestration`. Added pure diff helpers plus `reaudit.ts` so snapshot-backed audits re-run against current pricing, skip already-notified `(audit_id, pricing_version)` pairs, and group by earliest non-unsubscribed lead email. First fixtures were wrong — Cursor kept flipping cross-vendor — so I rebuilt them around Claude Team Standard. 5 new diff tests; full suite 57/57, typecheck clean, targeted lint clean.
+
+## 2026-05-21 00:30 - Phase 4: re-audit email template
+
+Added the consolidated re-audit email renderer plus sender wrapper. One email now carries 1..N affected audits, each with a short "was X, now Y" summary and a direct `/a/[id]/rerun` link; unsubscribe URL is threaded through as an optional arg for the later bonus path instead of hard-wiring it now. 2 new email-template tests added. Full suite 59/59, typecheck clean, targeted lint clean.

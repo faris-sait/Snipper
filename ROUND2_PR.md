@@ -24,7 +24,10 @@ _Step-by-step instructions so the reviewer can verify the feature works. Copy-pa
 
 ## What's tested
 
-_Bullet list of automated tests in this PR. If I skipped tests due to time, say so honestly and list what I'd test first._
+- `src/lib/audit/__tests__/engine.test.ts` proves the engine output changes when the same audit is run against a moved pricing registry.
+- `src/lib/audit/__tests__/diff.test.ts` covers no-change, recommendation-kind change, target-plan change, savings-only change, and mixed multi-line diffs.
+- `src/lib/email/__tests__/templates.test.ts` covers the existing confirmation templates plus the new consolidated re-audit email for single-audit and multi-audit cases.
+- Full suite currently passes at 59/59. Typecheck clean. Route-handler integration tests are still manual for now; the curl recipe will go in `## How to test it manually`.
 
 ## Open questions / risks
 
