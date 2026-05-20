@@ -24,3 +24,6 @@ Phase 1 ships a vertical slice first: schema + engine refactor + minimal `detect
 
 ## 2026-05-20 22:00 - Phase 1 vertical slice landed
 Migration 0003 written. Engine refactored with explicit `tools` parameter — 10 existing engine tests pass unchanged, plus a new proof-of-mechanism test (same input + different pricing → different recommendation target). `getEffectiveTools()` overlays `TOOLS` with `pricing_overrides`; `buildPerAuditSnapshot()` captures per-audit plans. Snapshot capture wired into `runAuditAction`. Minimal `POST /api/detect-changes` (bearer-auth) returns `{ scanned, affected, pricingVersion }`. 52/52 tests, typecheck clean, no new lint warnings.
+
+## 2026-05-20 22:30 - Phase 2: admin pricing endpoint
+POST + DELETE `/api/admin/pricing` with bearer-auth + Zod validation. Upserts and deletes `pricing_overrides` rows; rejects unknown `toolId`/`planId` pairs against the in-code TOOLS registry. Typecheck flagged a null-vs-undefined mismatch on the Zod schema for optional Plan fields — tightened to undefined-only (DELETE clears the whole row, so "set field to null" was ambiguous).
