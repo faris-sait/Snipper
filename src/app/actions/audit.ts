@@ -17,6 +17,10 @@ import {
 } from "@/lib/db/audits";
 import { isPersistenceConfigured } from "@/lib/db/supabase";
 import {
+  buildPerAuditSnapshot,
+  getEffectiveTools,
+} from "@/lib/pricing/effective";
+import {
   sendAuditLeadConfirmation,
   sendNotifyConfirmation,
 } from "@/lib/email/send";
@@ -51,7 +55,12 @@ export async function runAuditAction(args: RunAuditArgs): Promise<RunAuditState>
     return { status: "error", message: "Form input was invalid." };
   }
 
-  const result = runAudit(parsed.data);
+  // Round 2: resolve effective pricing (TOOLS + any pricing_overrides) and
+  // run the engine against it. Capturing the per-audit snapshot here means
+  // detect-changes can later re-run the engine against this audit's stored
+  // pricing context to render an exact diff of what changed.
+  const effective = await getEffectiveTools();
+  const result = runAudit(parsed.data, undefined, effective.tools);
 
   if (!isPersistenceConfigured()) {
     // Local-only mode — engine still ran, but no shareable link.
@@ -66,10 +75,15 @@ export async function runAuditAction(args: RunAuditArgs): Promise<RunAuditState>
       args.via && isWellFormedAuditId(args.via) && args.via.length === 12
         ? args.via
         : null;
+    const pricingSnapshot = buildPerAuditSnapshot(
+      effective.tools,
+      parsed.data.lines.map((l) => l.toolId),
+    );
     await persistAudit({
       id,
       input: parsed.data,
       result,
+      pricingSnapshot,
       requestMeta: {
         ...(await collectRequestMeta()),
         ...(referrer ? { referred_by: referrer } : {}),

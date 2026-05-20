@@ -175,17 +175,38 @@ export const TOOLS: Record<ToolId, Tool> = {
   },
 };
 
-export function getTool(id: ToolId): Tool {
-  const t = TOOLS[id];
+/**
+ * Lookup against an arbitrary tools registry. Round 2 needs to re-run the engine
+ * against the pricing snapshot stored on an old audit (or against the current
+ * effective pricing including DB overrides) — so the engine and rules read
+ * pricing from a parameter, not directly from the module-level `TOOLS` constant.
+ *
+ * `getTool` / `getPlan` below are thin wrappers around these for callers that
+ * just want today's prices.
+ */
+export function getToolFrom(tools: Record<ToolId, Tool>, id: ToolId): Tool {
+  const t = tools[id];
   if (!t) throw new Error(`Unknown tool id: ${id}`);
   return t;
 }
 
-export function getPlan(toolId: ToolId, planId: string): Plan {
-  const tool = getTool(toolId);
+export function getPlanFrom(
+  tools: Record<ToolId, Tool>,
+  toolId: ToolId,
+  planId: string,
+): Plan {
+  const tool = getToolFrom(tools, toolId);
   const p = tool.plans.find((p) => p.id === planId);
   if (!p) throw new Error(`Unknown plan: ${toolId}/${planId}`);
   return p;
+}
+
+export function getTool(id: ToolId): Tool {
+  return getToolFrom(TOOLS, id);
+}
+
+export function getPlan(toolId: ToolId, planId: string): Plan {
+  return getPlanFrom(TOOLS, toolId, planId);
 }
 
 export const ALL_TOOLS: Tool[] = Object.values(TOOLS);

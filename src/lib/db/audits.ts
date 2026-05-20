@@ -2,6 +2,7 @@ import "server-only";
 
 import type { AuditFormValues } from "@/lib/audit/schema";
 import type { AuditResult } from "@/lib/audit/types";
+import type { PricingSnapshot } from "@/lib/pricing/effective";
 import { getSupabaseService } from "./supabase";
 
 export interface PublicAuditRow {
@@ -12,6 +13,8 @@ export interface PublicAuditRow {
   monthly_savings_usd: number;
   current_monthly_usd: number;
   ai_summary: string | null;
+  /** Null on pre-Round-2 rows; populated for every audit captured after the migration. */
+  pricing_snapshot: PricingSnapshot | null;
 }
 
 /**
@@ -23,6 +26,8 @@ export async function persistAudit(args: {
   id: string;
   input: AuditFormValues;
   result: AuditResult;
+  /** Round 2: the plans for tools referenced by this audit at audit-run time. */
+  pricingSnapshot?: PricingSnapshot;
   requestMeta?: Record<string, unknown>;
 }): Promise<void> {
   const sb = getSupabaseService();
@@ -33,9 +38,36 @@ export async function persistAudit(args: {
     result: args.result,
     monthly_savings_usd: args.result.totals.monthlySavingsUsd,
     current_monthly_usd: args.result.totals.currentMonthlyUsd,
+    pricing_snapshot: args.pricingSnapshot ?? null,
     request_meta: args.requestMeta ?? null,
   });
   if (error) throw new Error(`persistAudit: ${error.message}`);
+}
+
+/** Row shape returned by `listAuditsWithSnapshot` — server-only reads. */
+export interface AuditWithSnapshot {
+  id: string;
+  created_at: string;
+  input: AuditFormValues;
+  result: AuditResult;
+  pricing_snapshot: PricingSnapshot;
+}
+
+/**
+ * Read all audits eligible for re-audit detection — those with a captured
+ * pricing snapshot. Pre-Round-2 rows have NULL `pricing_snapshot` and are
+ * filtered out here, so detect-changes never fires against an audit whose
+ * original pricing context is unknown.
+ */
+export async function listAuditsWithSnapshot(): Promise<AuditWithSnapshot[]> {
+  const sb = getSupabaseService();
+  if (!sb) return [];
+  const { data, error } = await sb
+    .from("audits")
+    .select("id, created_at, input, result, pricing_snapshot")
+    .not("pricing_snapshot", "is", null);
+  if (error) throw new Error(`listAuditsWithSnapshot: ${error.message}`);
+  return (data ?? []) as AuditWithSnapshot[];
 }
 
 /**

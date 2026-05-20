@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { TOOLS } from "@/lib/pricing/tools";
 import { runAudit } from "../engine";
 import type { AuditInput } from "../types";
 
@@ -141,6 +142,46 @@ describe("runAudit — rule selection", () => {
     expect(result.results[0]!.planHealth.status).toBe("risk");
     expect(result.results[0]!.planHealth.note).toBeDefined();
     expect(result.results[1]!.planHealth.status).toBe("ok");
+  });
+
+  it("respects a custom pricing registry passed as the third argument", () => {
+    // Round 2 mechanism: the engine accepts an explicit `tools` parameter so an
+    // old audit can be re-evaluated against either its stored pricing snapshot
+    // or the current effective pricing. This is the proof that the parameter
+    // actually changes engine output — same input + different pricing → different
+    // recommendation.
+    const teamsLine: Partial<AuditInput> = {
+      lines: [
+        { toolId: "cursor", planId: "teams", seats: 2, monthlySpendUsd: 80 },
+      ],
+    };
+
+    // With default pricing, Cursor Teams at 2 seats downgrades to Pro
+    // (2 × $20 = $40, saving $40 vs the $80 Teams seat).
+    const baseline = runAudit(input(teamsLine));
+    expect(baseline.results[0]!.recommendation.kind).toBe("downgrade_plan");
+    expect(baseline.results[0]!.recommendation.toPlanId).toBe("pro");
+
+    // Hand the engine a custom registry where Cursor Pro is $60/seat: at 2 seats
+    // that's $120/mo, more than the user's current $80 Teams seat. The downgrade
+    // rule can't fire against this pricing, so the engine should pick a different
+    // recommendation than the baseline.
+    const bumped = {
+      ...TOOLS,
+      cursor: {
+        ...TOOLS.cursor,
+        plans: TOOLS.cursor.plans.map((p) =>
+          p.id === "pro" ? { ...p, pricePerSeatMonthly: 60 } : p,
+        ),
+      },
+    };
+    const withBumpedPro = runAudit(input(teamsLine), undefined, bumped);
+    const rec = withBumpedPro.results[0]!.recommendation;
+    // Different pricing → different recommended target (or no downgrade target at all).
+    expect(rec.toToolId).not.toBe("cursor");
+    expect(withBumpedPro.totals.recommendedMonthlyUsd).not.toBe(
+      baseline.totals.recommendedMonthlyUsd,
+    );
   });
 
   it("aggregates per-line recommendations into a coherent total", () => {

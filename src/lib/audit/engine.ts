@@ -1,4 +1,5 @@
-import { getPlan } from "@/lib/pricing/tools";
+import { TOOLS, getPlanFrom } from "@/lib/pricing/tools";
+import type { Tool, ToolId } from "@/lib/pricing/types";
 import { classifyPlanHealth } from "./plan-health";
 import { ALL_RULES, FRICTION_WEIGHT, type Rule } from "./rules";
 import type {
@@ -20,12 +21,18 @@ const OPTIMAL_THRESHOLD = 100; // brief: "<$100/mo → 'you're spending well'"
  *   3. Picks the highest-savings candidate per line (or "optimal" if none beats it),
  *   4. Aggregates totals and decides whether to surface the Credex CTA.
  *
- * Pure function — no I/O, no Date.now(), deterministic for tests.
+ * Pure function — no I/O, no Date.now(), deterministic for tests. Pricing comes
+ * in as the third argument so the engine can re-run an old audit against its
+ * stored snapshot or against current effective pricing including DB overrides.
  */
-export function runAudit(input: AuditInput, rules: Rule[] = ALL_RULES): AuditResult {
+export function runAudit(
+  input: AuditInput,
+  rules: Rule[] = ALL_RULES,
+  tools: Record<ToolId, Tool> = TOOLS,
+): AuditResult {
   const results: AuditLineResult[] = input.lines.map((line) => ({
     line,
-    recommendation: pickBest(line, input, rules),
+    recommendation: pickBest(line, input, rules, tools),
     planHealth: classifyPlanHealth(line.toolId, line.planId),
   }));
 
@@ -42,17 +49,22 @@ export function runAudit(input: AuditInput, rules: Rule[] = ALL_RULES): AuditRes
   };
 }
 
-function pickBest(line: SpendLine, ctx: AuditInput, rules: Rule[]): Recommendation {
+function pickBest(
+  line: SpendLine,
+  ctx: AuditInput,
+  rules: Rule[],
+  tools: Record<ToolId, Tool>,
+): Recommendation {
   // Validate the plan exists — if not, skip. The form layer should prevent this,
   // but defending here keeps the engine usable from arbitrary callers.
   try {
-    getPlan(line.toolId, line.planId);
+    getPlanFrom(tools, line.toolId, line.planId);
   } catch {
     return optimalRecommendation(line, "Unrecognised plan — left as-is.");
   }
 
   const candidates = rules
-    .map((rule) => rule(line, ctx))
+    .map((rule) => rule(line, ctx, tools))
     .filter((r): r is Recommendation => r !== null);
 
   if (candidates.length === 0) {

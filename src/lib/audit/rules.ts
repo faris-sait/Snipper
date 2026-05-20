@@ -1,6 +1,6 @@
-import { TOOLS, getPlan, getTool } from "@/lib/pricing/tools";
+import { TOOLS, getPlanFrom, getToolFrom } from "@/lib/pricing/tools";
 import { ALTERNATIVES } from "@/lib/pricing/alternatives";
-import type { Tool } from "@/lib/pricing/types";
+import type { Tool, ToolId } from "@/lib/pricing/types";
 import type {
   AuditInput,
   Recommendation,
@@ -9,15 +9,20 @@ import type {
 } from "./types";
 
 /**
- * A Rule inspects one spend line against the full audit context and may emit
- * a candidate Recommendation. The engine collects every candidate and picks
- * the one with the largest *friction-adjusted* savings (see FRICTION_WEIGHT
- * in engine.ts).
+ * A Rule inspects one spend line against the full audit context and an explicit
+ * pricing registry, and may emit a candidate Recommendation. The engine collects
+ * every candidate and picks the one with the largest *friction-adjusted* savings
+ * (see FRICTION_WEIGHT in engine.ts).
  *
- * Rules MUST be pure: same inputs → same outputs. They never read network or
- * env. This is what makes the engine testable.
+ * Rules MUST be pure: same inputs → same outputs. They never read network, env,
+ * or the module-level `TOOLS` constant — pricing comes in as a parameter so the
+ * engine can re-run an old audit against its stored pricing snapshot.
  */
-export type Rule = (line: SpendLine, ctx: AuditInput) => Recommendation | null;
+export type Rule = (
+  line: SpendLine,
+  ctx: AuditInput,
+  tools: Record<ToolId, Tool>,
+) => Recommendation | null;
 
 /**
  * Rule 1: same vendor, cheaper plan that still fits.
@@ -28,8 +33,8 @@ export type Rule = (line: SpendLine, ctx: AuditInput) => Recommendation | null;
  * would (rightly) push back on a recommendation built on no signal. Team-tier
  * overspend is unambiguous: per-seat math doesn't lie.
  */
-export const ruleCheaperVendorPlan: Rule = (line) => {
-  const fromPlan = getPlan(line.toolId, line.planId);
+export const ruleCheaperVendorPlan: Rule = (line, _ctx, tools) => {
+  const fromPlan = getPlanFrom(tools, line.toolId, line.planId);
   if (!fromPlan.minSeats) return null;
 
   // Once you're well past the team-tier break-even (3× the minimum seat count),
@@ -37,7 +42,7 @@ export const ruleCheaperVendorPlan: Rule = (line) => {
   // that wouldn't actually save anything.
   if (line.seats >= fromPlan.minSeats * 3) return null;
 
-  const tool = getTool(line.toolId);
+  const tool = getToolFrom(tools, line.toolId);
   const candidates = tool.plans
     .filter((p) => p.id !== line.planId)
     .filter((p) => p.kind === "seat") // never recommend dropping to "free" without usage data.
@@ -71,7 +76,7 @@ export const ruleCheaperVendorPlan: Rule = (line) => {
  * "defensible reasoning" the brief asks for: every swap traces to a row a
  * finance person can read.
  */
-export const ruleCheaperAlternative: Rule = (line, ctx) => {
+export const ruleCheaperAlternative: Rule = (line, ctx, tools) => {
   const swaps = ALTERNATIVES.filter(
     (a) =>
       a.fromToolId === line.toolId &&
@@ -81,7 +86,7 @@ export const ruleCheaperAlternative: Rule = (line, ctx) => {
 
   const candidates = swaps
     .map((swap) => {
-      const toTool = getTool(swap.toToolId);
+      const toTool = getToolFrom(tools, swap.toToolId);
       const cheapest = pickCheapestFittingPlan(toTool, line.seats);
       if (!cheapest) return null;
       const projected = cheapest.pricePerSeatMonthly * line.seats;
@@ -125,13 +130,13 @@ const CREDEX_VENDORS = new Set<Tool["id"]>([
 ]);
 const CREDEX_DISCOUNT = 0.25; // conservative — typical Credex savings 20–30% off retail
 
-export const ruleUseCredex: Rule = (line) => {
+export const ruleUseCredex: Rule = (line, _ctx, tools) => {
   if (!CREDEX_VENDORS.has(line.toolId)) return null;
   if (line.monthlySpendUsd < 200) return null;
 
   const projected = line.monthlySpendUsd * (1 - CREDEX_DISCOUNT);
   const savings = line.monthlySpendUsd - projected;
-  const tool = getTool(line.toolId);
+  const tool = getToolFrom(tools, line.toolId);
 
   return {
     kind: "use_credex",
