@@ -65,14 +65,16 @@ describe("groupAffectedAuditsByEmail", () => {
     ]);
   });
 
-  it("skips unsubscribed audits and audits with no stored email", () => {
+  it("skips every audit belonging to an unsubscribed email and audits with no stored email", () => {
     const grouped = groupAffectedAuditsByEmail(
       [
         makeAffectedAudit("abc12345xyzz", "one@example.com"),
         makeAffectedAudit("def67890lmno", null),
         makeAffectedAudit("ghi24680pqrs", "two@example.com"),
+        // Same unsubscribed email on a different audit id must also be muted.
+        makeAffectedAudit("jkl13579tuvw", "two@example.com"),
       ],
-      new Set(["ghi24680pqrs"]),
+      new Set(["two@example.com"]),
     );
 
     expect(Array.from(grouped.keys())).toEqual(["one@example.com"]);

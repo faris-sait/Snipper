@@ -41,6 +41,15 @@ async function handle(
   }
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function renderPage(body: string, status: number): Response {
   const html = `<!doctype html>
 <html lang="en">
@@ -76,13 +85,13 @@ export async function GET(req: Request): Promise<Response> {
   const result = await handle(email, token);
   if (!result.ok) {
     return renderPage(
-      `<h1>Could not unsubscribe</h1><p>${result.message}</p>`,
+      `<h1>Could not unsubscribe</h1><p>${escapeHtml(result.message)}</p>`,
       result.status,
     );
   }
 
   return renderPage(
-    `<h1>You're unsubscribed.</h1><p>We won't send any more re-audit alerts to <strong>${email}</strong>.</p><p>You can still re-run any past audit from its share link.</p>`,
+    `<h1>You're unsubscribed.</h1><p>We won't send any more re-audit alerts to <strong>${escapeHtml(email ?? "")}</strong>.</p><p>You can still re-run any past audit from its share link.</p>`,
     200,
   );
 }

@@ -11,8 +11,8 @@ import { runAudit } from "./engine";
 import type { AuditInput, AuditResult, Recommendation } from "./types";
 import { listAuditsWithSnapshot } from "@/lib/db/audits";
 
-interface UnsubscribedAuditRow {
-  audit_id: string;
+interface UnsubscribedEmailRow {
+  email: string;
 }
 
 interface ReauditNotificationRow {
@@ -110,7 +110,11 @@ export async function findAffectedAudits(
 
 /**
  * Group changed audits by the canonical email stored on the audit row, while
- * skipping any audit that has been unsubscribed from re-audit alerts.
+ * skipping any recipient whose email has unsubscribed from re-audit alerts.
+ *
+ * Suppression is email-scoped (not audit-scoped): a single unsubscribed
+ * `audit_leads` row for an email is enough to mute every past and future
+ * audit that maps back to that email.
  */
 export async function groupAffectedByEmail(
   affectedAudits: AffectedAudit[],
@@ -120,33 +124,43 @@ export async function groupAffectedByEmail(
   const sb = getSupabaseService();
   if (!sb) return groupAffectedAuditsByEmail(affectedAudits, new Set());
 
-  const auditIds = affectedAudits.map((audit) => audit.auditId);
+  const candidateEmails = Array.from(
+    new Set(
+      affectedAudits
+        .map((audit) => audit.email?.trim().toLowerCase() ?? null)
+        .filter((email): email is string => Boolean(email)),
+    ),
+  );
+  if (candidateEmails.length === 0) return new Map();
+
   const { data, error } = await sb
     .from("audit_leads")
-    .select("audit_id")
-    .in("audit_id", auditIds)
+    .select("email")
+    .in("email", candidateEmails)
     .not("unsubscribed_at", "is", null);
 
   if (error) {
     throw new Error(`groupAffectedByEmail: ${error.message}`);
   }
 
-  return groupAffectedAuditsByEmail(
-    affectedAudits,
-    new Set(((data ?? []) as UnsubscribedAuditRow[]).map((row) => row.audit_id)),
+  const unsubscribedEmails = new Set(
+    ((data ?? []) as UnsubscribedEmailRow[]).map((row) =>
+      row.email.trim().toLowerCase(),
+    ),
   );
+
+  return groupAffectedAuditsByEmail(affectedAudits, unsubscribedEmails);
 }
 
 export function groupAffectedAuditsByEmail(
   affectedAudits: AffectedAudit[],
-  unsubscribedAuditIds: Set<string>,
+  unsubscribedEmails: Set<string>,
 ): Map<string, AffectedAudit[]> {
   const grouped = new Map<string, AffectedAudit[]>();
   for (const affectedAudit of affectedAudits) {
-    if (unsubscribedAuditIds.has(affectedAudit.auditId)) continue;
-
     const email = affectedAudit.email?.trim().toLowerCase() ?? null;
     if (!email) continue;
+    if (unsubscribedEmails.has(email)) continue;
 
     const bucket = grouped.get(email);
     if (bucket) {
