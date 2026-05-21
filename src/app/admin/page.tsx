@@ -5,7 +5,11 @@ import { SiteLogo } from "@/components/site-logo";
 import { Card, CardBody } from "@/components/ui/card";
 import { ADMIN_COOKIE_NAME, verifyAdminToken } from "@/lib/admin/auth";
 import { loadAdminMetrics, type AdminMetrics } from "@/lib/db/admin-metrics";
+import { listRecentPricingOverrides } from "@/lib/db/pricing-overrides";
 import { isPersistenceConfigured } from "@/lib/db/supabase";
+import { TOOLS } from "@/lib/pricing/tools";
+
+import { AdminControls, type ActiveOverride, type ToolOption } from "./AdminControls";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -32,6 +36,7 @@ export default async function AdminPage({ searchParams }: PageProps) {
 
   let metrics: AdminMetrics | null = null;
   let loadError: string | null = null;
+  let activeOverrides: ActiveOverride[] = [];
 
   if (!isPersistenceConfigured()) {
     metrics = { audits: 0, notifications: 0, uniqueClicks: 0, ctr: null };
@@ -41,7 +46,45 @@ export default async function AdminPage({ searchParams }: PageProps) {
     } catch (error) {
       loadError = error instanceof Error ? error.message : "Failed to load metrics.";
     }
+
+    try {
+      const rows = await listRecentPricingOverrides(365);
+      activeOverrides = rows
+        .map((row): ActiveOverride | null => {
+          const tool = TOOLS[row.tool_id as keyof typeof TOOLS];
+          const plan = tool?.plans.find((p) => p.id === row.plan_id);
+          if (!tool || !plan) return null;
+          const overridePrice =
+            row.overrides.pricePerSeatMonthly ?? plan.pricePerSeatMonthly;
+          return {
+            toolId: row.tool_id,
+            planId: row.plan_id,
+            toolDisplayName: tool.displayName,
+            planName: plan.vendorPlanName,
+            baselinePrice: plan.pricePerSeatMonthly,
+            overridePrice,
+            updatedAt: row.updated_at,
+          };
+        })
+        .filter((row): row is ActiveOverride => row !== null);
+    } catch (error) {
+      console.warn("[admin] failed to load overrides:", error);
+    }
   }
+
+  const toolOptions: ToolOption[] = Object.values(TOOLS)
+    .map((tool) => ({
+      id: tool.id,
+      displayName: tool.displayName,
+      plans: tool.plans
+        .filter((p) => p.kind !== "usage" && p.kind !== "free")
+        .map((p) => ({
+          id: p.id,
+          vendorPlanName: p.vendorPlanName,
+          pricePerSeatMonthly: p.pricePerSeatMonthly,
+        })),
+    }))
+    .filter((tool) => tool.plans.length > 0);
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-12 lg:px-10 lg:py-16">
@@ -66,6 +109,8 @@ export default async function AdminPage({ searchParams }: PageProps) {
       ) : metrics ? (
         <MetricsGrid metrics={metrics} />
       ) : null}
+
+      <AdminControls tools={toolOptions} activeOverrides={activeOverrides} />
 
       <section className="mt-12">
         <h2 className="text-xs font-mono uppercase tracking-tight text-muted-fg">
