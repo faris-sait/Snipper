@@ -222,11 +222,7 @@ export function renderReauditNotification(args: {
           : ""
       }
       <p style="margin:32px 0 0; font-size:12px; color:#5a5a55; border-top:1px solid #e7e5dd; padding-top:16px;">
-        ${
-          args.unsubscribeUrl
-            ? `<a href="${escapeHtml(args.unsubscribeUrl)}" style="color:#5a5a55;">Unsubscribe</a> · `
-            : ""
-        }Made for <a href="https://credex.rocks" style="color:#5a5a55;">credex.rocks</a>
+        Made for <a href="https://credex.rocks" style="color:#5a5a55;">credex.rocks</a>
       </p>
     </td></tr>
   </table>
