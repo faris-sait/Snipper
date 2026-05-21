@@ -164,6 +164,10 @@ export default function Home() {
             <Link className="hover:text-fg underline-offset-4 hover:underline" href="/pricing-sources">
               sources
             </Link>
+            {" · "}
+            <Link className="hover:text-fg underline-offset-4 hover:underline" href="/changes">
+              changes
+            </Link>
           </p>
         </div>
       </footer>
