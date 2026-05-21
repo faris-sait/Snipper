@@ -25,18 +25,18 @@ A static audit ages badly — Cursor raised prices, Claude added tiers, Copilot 
 
 ## How to test it manually
 
-**One-click admin access** (sets a 12h HttpOnly cookie, lands on `/admin`):
-
-https://snipper-alpha.vercel.app/admin/login?token=a03fe834fda7358f7f434e9e66c8bb8a1f190c88c1cf28b2fa0bf1535b45856f
+The admin dashboard is gated behind an `ADMIN_TOKEN` cookie. I'm including a one-click `/admin/login?token=...` magic link in the Google Form submission rather than checking the token into this PR — it sets a 12h HttpOnly cookie and lands you on `/admin`. From there:
 
 1. Submit a fresh audit at `/audit` — **Cursor / Teams plan, 2 seats, $80/mo, your real email**. Wait for the confirmation email.
 2. On `/admin` → "Set or update a pricing override" → pick **Cursor · Pro · $20 baseline** → enter `60` → Apply.
 3. Click "Run detect-changes now".
-4. Inbox lands "Pricing changed on N of your audits" within ~10s. Verify: vendor move Cursor Pro $20→$60; recommendation flipped from "downgrade to Pro" to "switch to GitHub Copilot Pro"; Unsubscribe link in footer.
+4. Inbox lands "Pricing changed on N of your audits" within ~10s. Verify: vendor move Cursor Pro $20→$60; recommendation flipped from "downgrade to Pro" to "switch to GitHub Copilot Pro"; Unsubscribe block under the audit items.
 5. Click "Compare old vs new audit" → side-by-side diff with savings delta headline.
 6. Reload `/admin` → CTR ticks up.
 7. (Bonus) Click "Unsubscribe" → re-trigger detect-changes → no second email.
 8. (Cleanup) "Active overrides" → "Clear".
+
+**Prefer curl?** Hit `POST /api/admin/pricing` and `POST /api/detect-changes` with `Authorization: Bearer <ADMIN_TOKEN>` — same code path, same token (also in the Google Form submission).
 
 ## What's tested
 
