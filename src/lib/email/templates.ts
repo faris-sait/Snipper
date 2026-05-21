@@ -214,10 +214,17 @@ export function renderReauditNotification(args: {
           : `We re-ran ${count} saved audits against current pricing.`,
       )}</p>
       ${htmlItems}
+      ${
+        args.unsubscribeUrl
+          ? `<p style="margin:24px 0 0; font-size:13px; color:#0f0f0d; line-height:1.5;">
+        Don&rsquo;t want these alerts? <a href="${escapeHtml(args.unsubscribeUrl)}" style="color:#0d6b4f; text-decoration:underline;">Unsubscribe instantly</a> — we won&rsquo;t email this address again about pricing changes.
+      </p>`
+          : ""
+      }
       <p style="margin:32px 0 0; font-size:12px; color:#5a5a55; border-top:1px solid #e7e5dd; padding-top:16px;">
         ${
           args.unsubscribeUrl
-            ? `<a href="${escapeHtml(args.unsubscribeUrl)}" style="color:#5a5a55;">Unsubscribe from these alerts</a> · `
+            ? `<a href="${escapeHtml(args.unsubscribeUrl)}" style="color:#5a5a55;">Unsubscribe</a> · `
             : ""
         }Made for <a href="https://credex.rocks" style="color:#5a5a55;">credex.rocks</a>
       </p>
