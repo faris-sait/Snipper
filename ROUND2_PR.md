@@ -25,7 +25,7 @@ A static audit ages badly — Cursor raised prices, Claude added tiers, Copilot 
 
 ## How to test it manually
 
-The admin dashboard is gated behind an `ADMIN_TOKEN` cookie. I'm including a one-click `/admin/login?token=...` magic link in the Google Form submission rather than checking the token into this PR — it sets a 12h HttpOnly cookie and lands you on `/admin`. From there:
+`/admin` is gated behind a 12-hour `__admin` cookie set by `GET /admin/login?token=<ADMIN_TOKEN>`. The token is delivered out-of-band with the submission. Once you're on `/admin`:
 
 1. Submit a fresh audit at `/audit` — **Cursor / Teams plan, 2 seats, $80/mo, your real email**. Wait for the confirmation email.
 2. On `/admin` → "Set or update a pricing override" → pick **Cursor · Pro · $20 baseline** → enter `60` → Apply.
@@ -36,7 +36,7 @@ The admin dashboard is gated behind an `ADMIN_TOKEN` cookie. I'm including a one
 7. (Bonus) Click "Unsubscribe" → re-trigger detect-changes → no second email.
 8. (Cleanup) "Active overrides" → "Clear".
 
-**Prefer curl?** Hit `POST /api/admin/pricing` and `POST /api/detect-changes` with `Authorization: Bearer <ADMIN_TOKEN>` — same code path, same token (also in the Google Form submission).
+**Prefer curl?** Hit `POST /api/admin/pricing` and `POST /api/detect-changes` with `Authorization: Bearer <ADMIN_TOKEN>` — same code path, same token.
 
 ## What's tested
 
