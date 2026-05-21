@@ -15,6 +15,13 @@ export interface ReauditNotificationItem {
   auditId: string;
   diff: AuditDiff;
   priceChanges: string[];
+  /**
+   * The pricing_version this notification was sent against. Threaded through
+   * to the rerun URL as `?v=<version>` so a click on the email link can be
+   * attributed to the exact `reaudit_notifications` row that produced it.
+   * Optional — older callers that don't track version send a link without it.
+   */
+  pricingVersion?: string;
 }
 
 /**
@@ -228,8 +235,22 @@ function topActionableLines(result: AuditResult, n: number): AuditLineResult[] {
     .slice(0, n);
 }
 
+/**
+ * Public rerun URL with optional `?v=<pricing_version>` for click attribution.
+ * Pure — pricing_version is opaque to this helper; falsy values skip the query.
+ */
+export function buildRerunUrl(
+  siteUrl: string,
+  auditId: string,
+  pricingVersion: string | null | undefined,
+): string {
+  const base = `${siteUrl}/a/${auditId}/rerun`;
+  if (!pricingVersion) return base;
+  return `${base}?v=${encodeURIComponent(pricingVersion)}`;
+}
+
 function renderReauditItemText(item: ReauditNotificationItem, siteUrl: string): string {
-  const rerunUrl = `${siteUrl}/a/${item.auditId}/rerun`;
+  const rerunUrl = buildRerunUrl(siteUrl, item.auditId, item.pricingVersion);
   const changedLines = changedLineSummaries(item.diff)
     .map((line) => `- ${line}`)
     .join("\n");
@@ -246,7 +267,7 @@ function renderReauditItemText(item: ReauditNotificationItem, siteUrl: string): 
 }
 
 function renderReauditItemHtml(item: ReauditNotificationItem, siteUrl: string): string {
-  const rerunUrl = `${siteUrl}/a/${item.auditId}/rerun`;
+  const rerunUrl = buildRerunUrl(siteUrl, item.auditId, item.pricingVersion);
   const changedLines = changedLineSummaries(item.diff)
     .map((line) => `<li style="margin:0 0 8px 0;">${escapeHtml(line)}</li>`)
     .join("");

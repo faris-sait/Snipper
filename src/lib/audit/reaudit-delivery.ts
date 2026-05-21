@@ -9,6 +9,8 @@ export interface AddressableAffectedAudit {
   auditId: string;
   diff: AuditDiff;
   priceChanges: string[];
+  /** Optional — when present, the rerun URL is annotated for click attribution. */
+  pricingVersion?: string;
 }
 
 export interface DeliverGroupedReauditNotificationsResult {

@@ -221,4 +221,30 @@ describe("renderReauditNotification", () => {
     expect(email.text).toContain("https://snipper.example.com/unsubscribe?token=abc");
     expect(email.html).toContain("https://snipper.example.com/unsubscribe?token=abc");
   });
+
+  it("annotates rerun URLs with ?v=<pricingVersion> for click attribution", () => {
+    const auditInput: AuditInput = {
+      teamSize: 2,
+      primaryUseCase: "coding",
+      lines: [{ toolId: "cursor", planId: "teams", seats: 2, monthlySpendUsd: 80 }],
+    };
+    const oldResult = runAudit(auditInput);
+    const newResult = runAudit(auditInput, undefined, withSeatPrice(TOOLS, "cursor", "pro", 60));
+
+    const email = renderReauditNotification({
+      siteUrl: "https://snipper.example.com",
+      items: [
+        {
+          auditId: "abc12345xyzz",
+          diff: diffAuditResults(oldResult, newResult),
+          priceChanges: ["Cursor Pro moved from $20/seat to $60/seat."],
+          pricingVersion: "70ff75ede007c931",
+        },
+      ],
+    });
+
+    const expected = "https://snipper.example.com/a/abc12345xyzz/rerun?v=70ff75ede007c931";
+    expect(email.text).toContain(expected);
+    expect(email.html).toContain(expected);
+  });
 });

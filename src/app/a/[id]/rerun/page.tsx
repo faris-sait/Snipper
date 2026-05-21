@@ -11,6 +11,7 @@ import { isWellFormedAuditId } from "@/lib/audit/id";
 import { rerunAuditAgainstCurrentPricing } from "@/lib/audit/reaudit";
 import type { AuditLineResult, Recommendation } from "@/lib/audit/types";
 import { getPublicAudit } from "@/lib/db/audits";
+import { recordReauditClick } from "@/lib/db/reaudit-clicks";
 import { isPersistenceConfigured } from "@/lib/db/supabase";
 import { getEffectiveTools } from "@/lib/pricing/effective";
 import { getPlanFrom, getToolFrom } from "@/lib/pricing/tools";
@@ -21,16 +22,26 @@ export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ v?: string }>;
 }
 
-export default async function RerunAuditPage({ params }: PageProps) {
+export default async function RerunAuditPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const { v: pricingVersionParam } = await searchParams;
 
   if (!isWellFormedAuditId(id)) notFound();
   if (!isPersistenceConfigured()) notFound();
 
   const audit = await getPublicAudit(id).catch(() => null);
   if (!audit) notFound();
+
+  // Phase 7.8: best-effort click attribution. Fire-and-forget so render
+  // latency isn't gated on the insert; bad/spoofed `v` values just write a
+  // row that no `reaudit_notifications` row will ever match, which the
+  // admin dashboard reduces away with count(distinct) anyway.
+  if (pricingVersionParam && /^[a-f0-9]{1,32}$/i.test(pricingVersionParam)) {
+    void recordReauditClick(id, pricingVersionParam);
+  }
 
   if (!audit.pricing_snapshot) {
     return (

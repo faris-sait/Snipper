@@ -48,6 +48,7 @@ export async function POST(req: Request): Promise<NextResponse> {
           auditId: audit.auditId,
           diff: audit.diff,
           priceChanges: audit.priceChanges,
+          pricingVersion: effective.version,
         })),
       ]),
     ),
