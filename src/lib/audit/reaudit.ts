@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getSupabaseService } from "@/lib/db/supabase";
+import { applySnapshotToTools, type PricingSnapshot } from "@/lib/pricing/effective";
 import type { Tool, ToolId } from "@/lib/pricing/types";
 
 import { diffAuditResults, isNonTrivialAuditDiff, type AuditDiff } from "./diff";
@@ -26,9 +27,41 @@ export interface AffectedAudit {
   diff: AuditDiff;
 }
 
+interface SnapshotBackedAudit {
+  input: AuditInput;
+  result: AuditResult;
+  pricing_snapshot: PricingSnapshot;
+}
+
+export interface RerunAuditResult {
+  oldTools: Record<ToolId, Tool>;
+  oldResult: AuditResult;
+  newResult: AuditResult;
+  diff: AuditDiff;
+}
+
 export interface FindAffectedAuditsResult {
   scanned: number;
   affectedAudits: AffectedAudit[];
+}
+
+/**
+ * Shared single-audit rerun path for both the `/a/[id]/rerun` page and the
+ * bulk detect-changes scan so they stay aligned on what changed.
+ */
+export function rerunAuditAgainstCurrentPricing(
+  audit: SnapshotBackedAudit,
+  currentTools: Record<ToolId, Tool>,
+): RerunAuditResult {
+  const oldTools = applySnapshotToTools(audit.pricing_snapshot);
+  const newResult = runAudit(audit.input, undefined, currentTools);
+
+  return {
+    oldTools,
+    oldResult: audit.result,
+    newResult,
+    diff: diffAuditResults(audit.result, newResult),
+  };
 }
 
 /**
@@ -53,16 +86,15 @@ export async function findAffectedAudits(
   for (const audit of audits) {
     if (alreadyNotified.has(audit.id)) continue;
 
-    const newResult = runAudit(audit.input, undefined, currentTools);
-    const diff = diffAuditResults(audit.result, newResult);
-    if (!isNonTrivialAuditDiff(diff)) continue;
+    const rerun = rerunAuditAgainstCurrentPricing(audit, currentTools);
+    if (!isNonTrivialAuditDiff(rerun.diff)) continue;
 
     affectedAudits.push({
       auditId: audit.id,
       input: audit.input,
-      oldResult: audit.result,
-      newResult,
-      diff,
+      oldResult: rerun.oldResult,
+      newResult: rerun.newResult,
+      diff: rerun.diff,
     });
   }
 

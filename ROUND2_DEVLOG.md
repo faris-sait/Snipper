@@ -49,3 +49,7 @@ Added the consolidated re-audit email renderer plus sender wrapper. One email no
 ## 2026-05-21 01:30 - Phase 5: detect-changes send path
 
 `POST /api/detect-changes` now groups affected audits by recipient, sends one consolidated re-audit email per user, and writes `reaudit_notifications` only for successful sends. Pulled the send/log loop into a pure `reaudit-delivery.ts` helper so it can be unit-tested without Supabase. 2 new orchestration tests added. Full suite 61/61, typecheck clean, targeted lint clean.
+
+## 2026-05-21 10:06 - Phase 6: rerun diff page
+
+`/a/[id]/rerun` is now a server-rendered side-by-side diff on the same public audit id, with an explicit "predates pricing snapshots" state for pre-Round-2 rows instead of inventing a counterfactual. First draft had the page hand-rolling the compare path; pulled that into `reaudit.ts` so detect-changes and the UI share the same rerun logic, then added a focused test proving the original side stays snapshot-backed while the rerun uses current effective pricing. Typecheck clean, full suite 62/62; repo-root `pnpm lint` is still red because this workspace also lints pre-existing `hyperframes/` files (106 errors, 41 warnings), but targeted eslint on the touched Phase 6 files is clean.
