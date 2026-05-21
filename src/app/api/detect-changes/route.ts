@@ -5,6 +5,7 @@ import { deliverGroupedReauditNotifications } from "@/lib/audit/reaudit-delivery
 import { persistReauditNotifications } from "@/lib/db/audits";
 import { isPersistenceConfigured } from "@/lib/db/supabase";
 import { sendReauditNotification } from "@/lib/email/send";
+import { buildUnsubscribeUrl } from "@/lib/email/unsubscribe";
 import { getEffectiveTools } from "@/lib/pricing/effective";
 
 // Reads pricing_overrides + audits from Supabase and runs the engine — Node
@@ -52,7 +53,10 @@ export async function POST(req: Request): Promise<NextResponse> {
     ),
     pricingVersion: effective.version,
     siteUrl,
-    sendEmail: sendReauditNotification,
+    sendEmail: async ({ to, siteUrl: site, items }) => {
+      const unsubscribeUrl = buildUnsubscribeUrl(site, to);
+      return sendReauditNotification({ to, siteUrl: site, items, unsubscribeUrl });
+    },
     persistNotifications: persistReauditNotifications,
   });
 

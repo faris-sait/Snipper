@@ -25,6 +25,7 @@ interface SendArgs {
   to: string;
   rendered: RenderedEmail;
   attachments?: EmailAttachment[];
+  headers?: Record<string, string>;
 }
 
 /**
@@ -33,7 +34,7 @@ interface SendArgs {
  * failing the caller. The lead/notify capture flow is the source of value;
  * email is a confirmation, not a gate.
  */
-async function send({ to, rendered, attachments }: SendArgs): Promise<SendStatus> {
+async function send({ to, rendered, attachments, headers }: SendArgs): Promise<SendStatus> {
   if (!isEmailConfigured()) {
     return { status: "skipped", reason: "RESEND env vars not set" };
   }
@@ -52,6 +53,7 @@ async function send({ to, rendered, attachments }: SendArgs): Promise<SendStatus
       html: rendered.html,
       text: rendered.text,
       ...(attachments && attachments.length > 0 ? { attachments } : {}),
+      ...(headers && Object.keys(headers).length > 0 ? { headers } : {}),
     });
     if (response.error) {
       // Log server-side, return error status — don't propagate.
@@ -114,5 +116,11 @@ export async function sendReauditNotification(args: {
     items: args.items,
     unsubscribeUrl: args.unsubscribeUrl,
   });
-  return send({ to: args.to, rendered });
+  const headers = args.unsubscribeUrl
+    ? {
+        "List-Unsubscribe": `<${args.unsubscribeUrl}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      }
+    : undefined;
+  return send({ to: args.to, rendered, headers });
 }

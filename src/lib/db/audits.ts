@@ -107,6 +107,50 @@ export async function persistLead(row: {
   if (error) throw new Error(`persistLead: ${error.message}`);
 }
 
+export async function markEmailUnsubscribed(email: string): Promise<void> {
+  const sb = getSupabaseService();
+  if (!sb) throw new Error("Supabase not configured");
+
+  const unsubscribedAt = new Date().toISOString();
+  const normalisedEmail = email.trim().toLowerCase();
+
+  const { error: updateError } = await sb
+    .from("audit_leads")
+    .update({ unsubscribed_at: unsubscribedAt })
+    .eq("email", normalisedEmail);
+
+  if (updateError) {
+    throw new Error(`markEmailUnsubscribed.update: ${updateError.message}`);
+  }
+
+  const { data: latestAudit, error: auditError } = await sb
+    .from("audits")
+    .select("id")
+    .eq("email", normalisedEmail)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (auditError) {
+    throw new Error(`markEmailUnsubscribed.auditLookup: ${auditError.message}`);
+  }
+
+  if (!latestAudit?.id) return;
+
+  const { error: upsertError } = await sb.from("audit_leads").upsert(
+    {
+      audit_id: latestAudit.id,
+      email: normalisedEmail,
+      unsubscribed_at: unsubscribedAt,
+    },
+    { onConflict: "audit_id,email" },
+  );
+
+  if (upsertError) {
+    throw new Error(`markEmailUnsubscribed.upsert: ${upsertError.message}`);
+  }
+}
+
 export async function persistNotifySignup(row: {
   email: string;
   audit_id: string | null;
