@@ -230,10 +230,10 @@ function AuditPageInner() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Where to send re-audit alerts</CardTitle>
+            <CardTitle>Get notified when pricing moves</CardTitle>
             <p className="text-muted-fg mt-1 text-xs">
-              Round 2 stores each audit with an email so pricing-change reruns can reach the same
-              inbox later.
+              AI tool pricing changes. We&rsquo;ll re-run this audit against new prices and email
+              you if your recommendation shifts.
             </p>
           </CardHeader>
           <CardBody>
