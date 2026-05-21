@@ -1,0 +1,29 @@
+name: Detect Pricing Changes
+
+on:
+  schedule:
+    - cron: "0 14 * * *"
+  workflow_dispatch:
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Trigger detect-changes scan
+        env:
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+        run: |
+          if [ -z "$ADMIN_TOKEN" ]; then
+            echo "ADMIN_TOKEN secret is not set" >&2
+            exit 1
+          fi
+
+          curl \
+            --fail \
+            --show-error \
+            --silent \
+            -X POST \
+            -H "Authorization: Bearer $ADMIN_TOKEN" \
+            https://snipper-alpha.vercel.app/api/detect-changes
