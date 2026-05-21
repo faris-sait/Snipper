@@ -14,6 +14,7 @@ export interface RenderedEmail {
 export interface ReauditNotificationItem {
   auditId: string;
   diff: AuditDiff;
+  priceChanges: string[];
 }
 
 /**
@@ -232,10 +233,12 @@ function renderReauditItemText(item: ReauditNotificationItem, siteUrl: string): 
   const changedLines = changedLineSummaries(item.diff)
     .map((line) => `- ${line}`)
     .join("\n");
+  const priceMoves = item.priceChanges.map((line) => `- ${line}`).join("\n");
 
   return [
     `Audit ${item.auditId}`,
     formatTotalsSummary(item.diff),
+    ...(item.priceChanges.length > 0 ? [`Vendor price moves:`, priceMoves] : []),
     `What changed:`,
     changedLines,
     `Compare: ${rerunUrl}`,
@@ -247,11 +250,19 @@ function renderReauditItemHtml(item: ReauditNotificationItem, siteUrl: string): 
   const changedLines = changedLineSummaries(item.diff)
     .map((line) => `<li style="margin:0 0 8px 0;">${escapeHtml(line)}</li>`)
     .join("");
+  const priceMoves = item.priceChanges
+    .map((line) => `<li style="margin:0 0 8px 0;">${escapeHtml(line)}</li>`)
+    .join("");
 
   return `
       <div style="margin:0 0 20px; padding:20px; border:1px solid #e7e5dd; border-radius:16px; background:#fffdf8;">
         <p style="margin:0 0 6px; font-family:'SFMono-Regular', Menlo, monospace; font-size:11px; letter-spacing:0.04em; text-transform:uppercase; color:#5a5a55;">Audit ${escapeHtml(item.auditId)}</p>
         <p style="margin:0 0 12px; font-size:15px; font-weight:600;">${escapeHtml(formatTotalsSummary(item.diff))}</p>
+        ${
+          item.priceChanges.length > 0
+            ? `<p style="margin:0 0 8px; font-size:13px; font-weight:600; color:#5a5a55;">Vendor price moves</p><ul style="margin:0 0 16px; padding:0 0 0 20px; font-size:14px; color:#0f0f0d;">${priceMoves}</ul>`
+            : ""
+        }
         <ul style="margin:0 0 16px; padding:0 0 0 20px; font-size:14px; color:#0f0f0d;">${changedLines}</ul>
         <p style="margin:0;"><a href="${escapeHtml(rerunUrl)}" style="color:#0d6b4f; text-decoration:underline; font-size:14px;">Compare old vs new audit</a></p>
       </div>`;

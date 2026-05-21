@@ -53,5 +53,6 @@ describe("rerunAuditAgainstCurrentPricing", () => {
     expect(rerun.oldResult).toEqual(oldResult);
     expect(rerun.newResult.results[0]?.recommendation.kind).toBe("switch_tool");
     expect(rerun.diff.lines[0]?.kind).toBe("recommendation_changed");
+    expect(rerun.priceChanges).toContain("Cursor Pro moved from $18/seat to $60/seat.");
   });
 });

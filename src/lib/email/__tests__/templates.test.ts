@@ -157,15 +157,19 @@ describe("renderReauditNotification", () => {
         {
           auditId: "abc12345xyzz",
           diff: diffAuditResults(oldResult, newResult),
+          priceChanges: ["Cursor Pro moved from $20/seat to $60/seat."],
         },
       ],
     });
 
     expect(email.subject).toBe("Pricing changed on 1 of your audits");
     expect(email.text).toContain("https://snipper.example.com/a/abc12345xyzz/rerun");
+    expect(email.text).toContain("Vendor price moves:");
+    expect(email.text).toContain("Cursor Pro moved from $20/seat to $60/seat.");
     expect(email.text).toContain("was downgrade to Pro");
     expect(email.text).toContain("now switch to GitHub Copilot Pro");
     expect(email.html).toContain("https://snipper.example.com/a/abc12345xyzz/rerun");
+    expect(email.html).toContain("Cursor Pro moved from $20/seat to $60/seat.");
   });
 
   it("renders multiple audits in one email and includes the unsubscribe link when provided", () => {
@@ -196,6 +200,7 @@ describe("renderReauditNotification", () => {
             runAudit(recChangeInput),
             runAudit(recChangeInput, undefined, withSeatPrice(TOOLS, "cursor", "pro", 60)),
           ),
+          priceChanges: ["Cursor Pro moved from $20/seat to $60/seat."],
         },
         {
           auditId: "def67890lmno",
@@ -203,6 +208,7 @@ describe("renderReauditNotification", () => {
             runAudit(savingsOnlyInput),
             runAudit(savingsOnlyInput, undefined, withSeatPrice(TOOLS, "claude", "pro", 22)),
           ),
+          priceChanges: ["Claude Pro moved from $20/seat to $22/seat."],
         },
       ],
       unsubscribeUrl: "https://snipper.example.com/unsubscribe?token=abc",
@@ -211,6 +217,7 @@ describe("renderReauditNotification", () => {
     expect(email.subject).toBe("Pricing changed on 2 of your audits");
     expect(email.text).toContain("Audit abc12345xyzz");
     expect(email.text).toContain("Audit def67890lmno");
+    expect(email.text).toContain("Claude Pro moved from $20/seat to $22/seat.");
     expect(email.text).toContain("https://snipper.example.com/unsubscribe?token=abc");
     expect(email.html).toContain("https://snipper.example.com/unsubscribe?token=abc");
   });

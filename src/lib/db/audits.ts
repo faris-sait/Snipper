@@ -24,6 +24,7 @@ export interface PublicAuditRow {
  */
 export async function persistAudit(args: {
   id: string;
+  email: string;
   input: AuditFormValues;
   result: AuditResult;
   /** Round 2: the plans for tools referenced by this audit at audit-run time. */
@@ -34,6 +35,7 @@ export async function persistAudit(args: {
   if (!sb) throw new Error("Supabase not configured");
   const { error } = await sb.from("audits").insert({
     id: args.id,
+    email: args.email,
     input: args.input,
     result: args.result,
     monthly_savings_usd: args.result.totals.monthlySavingsUsd,
@@ -48,6 +50,7 @@ export async function persistAudit(args: {
 export interface AuditWithSnapshot {
   id: string;
   created_at: string;
+  email: string | null;
   input: AuditFormValues;
   result: AuditResult;
   pricing_snapshot: PricingSnapshot;
@@ -64,10 +67,17 @@ export async function listAuditsWithSnapshot(): Promise<AuditWithSnapshot[]> {
   if (!sb) return [];
   const { data, error } = await sb
     .from("audits")
-    .select("id, created_at, input, result, pricing_snapshot")
+    .select("id, created_at, email, input, result, pricing_snapshot")
     .not("pricing_snapshot", "is", null);
   if (error) throw new Error(`listAuditsWithSnapshot: ${error.message}`);
   return (data ?? []) as AuditWithSnapshot[];
+}
+
+export async function setAuditEmail(auditId: string, email: string): Promise<void> {
+  const sb = getSupabaseService();
+  if (!sb) throw new Error("Supabase not configured");
+  const { error } = await sb.from("audits").update({ email }).eq("id", auditId);
+  if (error) throw new Error(`setAuditEmail: ${error.message}`);
 }
 
 /**

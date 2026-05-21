@@ -2,17 +2,17 @@ import "server-only";
 
 import { getSupabaseService } from "@/lib/db/supabase";
 import { applySnapshotToTools, type PricingSnapshot } from "@/lib/pricing/effective";
+import { getPlanFrom, getToolFrom } from "@/lib/pricing/tools";
 import type { Tool, ToolId } from "@/lib/pricing/types";
+import { formatUsd } from "@/lib/utils";
 
 import { diffAuditResults, isNonTrivialAuditDiff, type AuditDiff } from "./diff";
 import { runAudit } from "./engine";
-import type { AuditInput, AuditResult } from "./types";
+import type { AuditInput, AuditResult, Recommendation } from "./types";
 import { listAuditsWithSnapshot } from "@/lib/db/audits";
 
-interface AuditLeadRow {
+interface UnsubscribedAuditRow {
   audit_id: string;
-  email: string;
-  created_at: string;
 }
 
 interface ReauditNotificationRow {
@@ -21,6 +21,8 @@ interface ReauditNotificationRow {
 
 export interface AffectedAudit {
   auditId: string;
+  email: string | null;
+  priceChanges: string[];
   input: AuditInput;
   oldResult: AuditResult;
   newResult: AuditResult;
@@ -38,6 +40,7 @@ export interface RerunAuditResult {
   oldResult: AuditResult;
   newResult: AuditResult;
   diff: AuditDiff;
+  priceChanges: string[];
 }
 
 export interface FindAffectedAuditsResult {
@@ -55,12 +58,14 @@ export function rerunAuditAgainstCurrentPricing(
 ): RerunAuditResult {
   const oldTools = applySnapshotToTools(audit.pricing_snapshot);
   const newResult = runAudit(audit.input, undefined, currentTools);
+  const diff = diffAuditResults(audit.result, newResult);
 
   return {
     oldTools,
     oldResult: audit.result,
     newResult,
-    diff: diffAuditResults(audit.result, newResult),
+    diff,
+    priceChanges: summariseAuditPriceChanges(diff, oldTools, currentTools),
   };
 }
 
@@ -91,6 +96,8 @@ export async function findAffectedAudits(
 
     affectedAudits.push({
       auditId: audit.id,
+      email: audit.email,
+      priceChanges: rerun.priceChanges,
       input: audit.input,
       oldResult: rerun.oldResult,
       newResult: rerun.newResult,
@@ -102,9 +109,8 @@ export async function findAffectedAudits(
 }
 
 /**
- * Group changed audits by recipient email. If multiple lead rows exist for the
- * same audit, keep the earliest one so later phases can insert a single
- * `(audit_id, pricing_version)` notification row without PK conflicts.
+ * Group changed audits by the canonical email stored on the audit row, while
+ * skipping any audit that has been unsubscribed from re-audit alerts.
  */
 export async function groupAffectedByEmail(
   affectedAudits: AffectedAudit[],
@@ -112,30 +118,34 @@ export async function groupAffectedByEmail(
   if (affectedAudits.length === 0) return new Map();
 
   const sb = getSupabaseService();
-  if (!sb) return new Map();
+  if (!sb) return groupAffectedAuditsByEmail(affectedAudits, new Set());
 
   const auditIds = affectedAudits.map((audit) => audit.auditId);
   const { data, error } = await sb
     .from("audit_leads")
-    .select("audit_id, email, created_at")
+    .select("audit_id")
     .in("audit_id", auditIds)
-    .is("unsubscribed_at", null)
-    .order("created_at", { ascending: true });
+    .not("unsubscribed_at", "is", null);
 
   if (error) {
     throw new Error(`groupAffectedByEmail: ${error.message}`);
   }
 
-  const emailByAudit = new Map<string, string>();
-  for (const row of (data ?? []) as AuditLeadRow[]) {
-    if (!emailByAudit.has(row.audit_id)) {
-      emailByAudit.set(row.audit_id, row.email.trim().toLowerCase());
-    }
-  }
+  return groupAffectedAuditsByEmail(
+    affectedAudits,
+    new Set(((data ?? []) as UnsubscribedAuditRow[]).map((row) => row.audit_id)),
+  );
+}
 
+export function groupAffectedAuditsByEmail(
+  affectedAudits: AffectedAudit[],
+  unsubscribedAuditIds: Set<string>,
+): Map<string, AffectedAudit[]> {
   const grouped = new Map<string, AffectedAudit[]>();
   for (const affectedAudit of affectedAudits) {
-    const email = emailByAudit.get(affectedAudit.auditId);
+    if (unsubscribedAuditIds.has(affectedAudit.auditId)) continue;
+
+    const email = affectedAudit.email?.trim().toLowerCase() ?? null;
     if (!email) continue;
 
     const bucket = grouped.get(email);
@@ -148,6 +158,46 @@ export async function groupAffectedByEmail(
 
   return grouped;
 }
+
+export function summariseAuditPriceChanges(
+  diff: AuditDiff,
+  oldTools: Record<ToolId, Tool>,
+  newTools: Record<ToolId, Tool>,
+): string[] {
+  const seen = new Set<string>();
+  const summaries: string[] = [];
+
+  for (const line of diff.lines) {
+    const current = line.oldLineResult ?? line.newLineResult;
+    if (!current) continue;
+
+    const candidates = [
+      { toolId: current.line.toolId, planId: current.line.planId },
+      getRecommendationTarget(line.oldLineResult?.recommendation, current.line.toolId),
+      getRecommendationTarget(line.newLineResult?.recommendation, current.line.toolId),
+    ];
+
+    for (const candidate of candidates) {
+      if (!candidate) continue;
+      const key = `${candidate.toolId}/${candidate.planId}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      const summary = summarisePlanPriceChange(
+        oldTools,
+        newTools,
+        candidate.toolId,
+        candidate.planId,
+      );
+      if (summary) {
+        summaries.push(summary);
+      }
+    }
+  }
+
+  return summaries.slice(0, 3);
+}
+
 async function listAlreadyNotifiedAuditIds(
   auditIds: string[],
   pricingVersion: string,
@@ -168,4 +218,41 @@ async function listAlreadyNotifiedAuditIds(
   }
 
   return new Set(((data ?? []) as ReauditNotificationRow[]).map((row) => row.audit_id));
+}
+
+function getRecommendationTarget(
+  recommendation: Recommendation | undefined,
+  fromToolId: ToolId,
+): { toolId: ToolId; planId: string } | null {
+  if (!recommendation) return null;
+
+  if (recommendation.kind === "downgrade_plan" && recommendation.toPlanId) {
+    return { toolId: fromToolId, planId: recommendation.toPlanId };
+  }
+
+  if (recommendation.kind === "switch_tool" && recommendation.toToolId && recommendation.toPlanId) {
+    return { toolId: recommendation.toToolId, planId: recommendation.toPlanId };
+  }
+
+  return null;
+}
+
+function summarisePlanPriceChange(
+  oldTools: Record<ToolId, Tool>,
+  newTools: Record<ToolId, Tool>,
+  toolId: ToolId,
+  planId: string,
+): string | null {
+  try {
+    const before = getPlanFrom(oldTools, toolId, planId);
+    const after = getPlanFrom(newTools, toolId, planId);
+    if (before.pricePerSeatMonthly === after.pricePerSeatMonthly) return null;
+
+    const toolName = getToolFrom(newTools, toolId).displayName;
+    const planName = after.vendorPlanName || before.vendorPlanName || planId;
+
+    return `${toolName} ${planName} moved from ${formatUsd(before.pricePerSeatMonthly)}/seat to ${formatUsd(after.pricePerSeatMonthly)}/seat.`;
+  } catch {
+    return null;
+  }
 }

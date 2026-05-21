@@ -16,31 +16,26 @@ import { compareToBenchmark } from "@/lib/benchmark/compute";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { USE_CASE_PHRASES } from "@/lib/audit/schema";
 import type { AuditResult } from "@/lib/audit/types";
-import {
-  STORAGE_KEYS,
-  loadJson,
-  sessionStorageOrNull,
-} from "@/lib/hooks/use-draft-storage";
+import { STORAGE_KEYS, loadJson, sessionStorageOrNull } from "@/lib/hooks/use-draft-storage";
 import { formatUsd } from "@/lib/utils";
 
 export default function AuditResultPage() {
   const [result, setResult] = useState<AuditResult | null | undefined>(undefined);
   const [auditId, setAuditId] = useState<string | null>(null);
+  const [auditEmail, setAuditEmail] = useState<string | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
 
   useEffect(() => {
     const storage = sessionStorageOrNull();
-    const stored = loadJson<AuditResult | null>(
-      storage,
-      STORAGE_KEYS.lastResult,
-      null,
-    );
+    const stored = loadJson<AuditResult | null>(storage, STORAGE_KEYS.lastResult, null);
     const storedId = loadJson<string | null>(storage, STORAGE_KEYS.lastAuditId, null);
+    const storedEmail = loadJson<string | null>(storage, STORAGE_KEYS.lastAuditEmail, null);
     // One-time hydration from sessionStorage on mount. This *is* the sync
     // boundary with the external store, not avoidable effect-driven state.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setResult(stored);
     setAuditId(storedId);
+    setAuditEmail(storedEmail);
   }, []);
 
   // Phase 5 — AI summary loads after the page renders so the engine result
@@ -79,9 +74,7 @@ export default function AuditResultPage() {
   if (result === null) {
     return (
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col items-center justify-center px-6 py-24 text-center">
-        <p className="text-muted-fg font-mono text-xs tracking-tight uppercase">
-          No audit found
-        </p>
+        <p className="text-muted-fg font-mono text-xs tracking-tight uppercase">No audit found</p>
         <h1 className="mt-3 text-3xl font-medium tracking-tight">Run an audit first.</h1>
         <Link
           href="/audit"
@@ -118,14 +111,16 @@ export default function AuditResultPage() {
                 Nothing obvious to cut.
               </p>
               <p className="text-muted-fg mt-3 text-base">
-                Your stack looks within range for a{" "}
-                {USE_CASE_PHRASES[result.input.primaryUseCase]}{" "}
-                team. Drop your email and we&apos;ll let you know if a new
-                optimization shows up.
+                Your stack looks within range for a {USE_CASE_PHRASES[result.input.primaryUseCase]}{" "}
+                team.
               </p>
-              <div className="mt-6 max-w-md">
-                <NotifyMeForm auditId={auditId} />
-              </div>
+              {auditId && auditEmail ? (
+                <WatchEmailNotice email={auditEmail} className="mt-6 max-w-md" />
+              ) : (
+                <div className="mt-6 max-w-md">
+                  <NotifyMeForm auditId={auditId} />
+                </div>
+              )}
             </>
           ) : result.isOptimal ? (
             <>
@@ -133,20 +128,20 @@ export default function AuditResultPage() {
                 Modest savings
               </p>
               <p className="mt-3 text-5xl font-medium tracking-tight tabular-nums md:text-6xl">
-                <span className="text-accent">
-                  {formatUsd(result.totals.monthlySavingsUsd)}
-                </span>
+                <span className="text-accent">{formatUsd(result.totals.monthlySavingsUsd)}</span>
                 <span className="text-muted-fg ml-2 text-2xl font-normal">/mo</span>
               </p>
               <p className="text-muted-fg mt-2 text-base">
-                {formatUsd(result.totals.annualSavingsUsd)}{" "}
-                per year — small but real wins on the per-tool list below. Drop
-                your email and we&apos;ll let you know if a bigger optimization
-                shows up.
+                {formatUsd(result.totals.annualSavingsUsd)} per year — small but real wins on the
+                per-tool list below.
               </p>
-              <div className="mt-6 max-w-md">
-                <NotifyMeForm auditId={auditId} />
-              </div>
+              {auditId && auditEmail ? (
+                <WatchEmailNotice email={auditEmail} className="mt-6 max-w-md" />
+              ) : (
+                <div className="mt-6 max-w-md">
+                  <NotifyMeForm auditId={auditId} />
+                </div>
+              )}
             </>
           ) : (
             <>
@@ -154,9 +149,7 @@ export default function AuditResultPage() {
                 Estimated monthly savings
               </p>
               <p className="mt-3 text-5xl font-medium tracking-tight tabular-nums md:text-6xl">
-                <span className="text-accent">
-                  {formatUsd(result.totals.monthlySavingsUsd)}
-                </span>
+                <span className="text-accent">{formatUsd(result.totals.monthlySavingsUsd)}</span>
                 <span className="text-muted-fg ml-2 text-2xl font-normal">/mo</span>
               </p>
               <p className="text-muted-fg mt-2 text-base">
@@ -177,8 +170,8 @@ export default function AuditResultPage() {
                 Highest-leverage move
               </p>
               <p className="mt-2 text-xl font-medium tracking-tight">
-                Credex sources discounted credits for{" "}
-                {formatUsd(result.totals.monthlySavingsUsd)}/mo of your spend.
+                Credex sources discounted credits for {formatUsd(result.totals.monthlySavingsUsd)}
+                /mo of your spend.
               </p>
             </div>
             <Link
@@ -229,10 +222,7 @@ export default function AuditResultPage() {
           <ol role="list" className="-mx-2">
             {result.results.map((line, i) => (
               <li key={`${line.line.toolId}-${line.line.planId}-${i}`}>
-                <AuditLineCard
-                  result={line}
-                  primaryUseCase={result.input.primaryUseCase}
-                />
+                <AuditLineCard result={line} primaryUseCase={result.input.primaryUseCase} />
               </li>
             ))}
           </ol>
@@ -246,12 +236,13 @@ export default function AuditResultPage() {
               {result.surfaceCredex ? "Get this audit + Credex follow-up" : "Email me my audit"}
             </CardTitle>
             <p className="text-muted-fg mt-1 text-xs">
-              We don&apos;t store anything until you ask for the report.
+              Confirm the inbox for this audit and add any extra context you want on the follow-up.
             </p>
           </CardHeader>
           <CardBody className="pt-0">
             <LeadCaptureForm
               auditId={auditId}
+              defaultEmail={auditEmail}
               variant={result.surfaceCredex ? "credex" : "report"}
             />
           </CardBody>
@@ -309,6 +300,20 @@ function SummarySkeleton() {
       <div className="bg-muted h-3 w-[92%] rounded" />
       <div className="bg-muted h-3 w-3/4 rounded" />
       <span className="sr-only">Generating summary…</span>
+    </div>
+  );
+}
+
+function WatchEmailNotice({ email, className }: { email: string; className?: string }) {
+  return (
+    <div className={className}>
+      <div className="border-success/40 bg-success/5 rounded-xl border px-4 py-3">
+        <p className="text-fg text-sm leading-relaxed">
+          Snipper will re-audit this saved stack and email{" "}
+          <span className="font-medium">{email}</span> if current pricing creates a new
+          recommendation.
+        </p>
+      </div>
     </div>
   );
 }

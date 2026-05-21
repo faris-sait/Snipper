@@ -11,17 +11,23 @@ import { Label } from "@/components/ui/label";
 interface LeadCaptureFormProps {
   /** Audit id from sessionStorage. Null when persistence wasn't configured. */
   auditId: string | null;
+  /** Email already attached to the audit, when the submit path captured one. */
+  defaultEmail?: string | null;
   /** Tunes the copy for the high-savings case where Credex follow-up is on the table. */
   variant?: "report" | "credex";
 }
 
 /**
- * Email capture *after* value is shown (per brief). Optional company / role /
- * team_size fields surface for the recipient lifecycle in Phase 5; nothing
- * here blocks a user who just wants to drop an email and leave.
+ * Post-result enrichment: optional company / role / team_size fields for the
+ * recipient lifecycle, plus a prefilled email so the user can confirm or swap
+ * the inbox tied to this audit before we send the report.
  */
-export function LeadCaptureForm({ auditId, variant = "report" }: LeadCaptureFormProps) {
-  const [email, setEmail] = useState("");
+export function LeadCaptureForm({
+  auditId,
+  defaultEmail = null,
+  variant = "report",
+}: LeadCaptureFormProps) {
+  const [email, setEmail] = useState(defaultEmail ?? "");
   const [company, setCompany] = useState("");
   const [role, setRole] = useState("");
   const [teamSize, setTeamSize] = useState("");
@@ -133,7 +139,10 @@ export function LeadCaptureForm({ auditId, variant = "report" }: LeadCaptureForm
       </details>
 
       {/* Honeypot — visually hidden, hidden from AT, only bots fill it. */}
-      <div aria-hidden="true" className="absolute -left-[10000px] top-auto h-px w-px overflow-hidden">
+      <div
+        aria-hidden="true"
+        className="absolute top-auto -left-[10000px] h-px w-px overflow-hidden"
+      >
         <label>
           Leave empty
           <input

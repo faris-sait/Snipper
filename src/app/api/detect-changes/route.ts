@@ -43,7 +43,11 @@ export async function POST(req: Request): Promise<NextResponse> {
     grouped: new Map(
       Array.from(grouped.entries()).map(([email, audits]) => [
         email,
-        audits.map((audit) => ({ auditId: audit.auditId, diff: audit.diff })),
+        audits.map((audit) => ({
+          auditId: audit.auditId,
+          diff: audit.diff,
+          priceChanges: audit.priceChanges,
+        })),
       ]),
     ),
     pricingVersion: effective.version,

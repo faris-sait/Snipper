@@ -52,6 +52,7 @@ function AuditPageInner() {
   const via = searchParams?.get("via") ?? null;
   const [isPending, startTransition] = useTransition();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [contactEmail, setContactEmail] = useState("");
   // Honeypot — bots fill every input, humans never see this field. Kept in
   // component state so it round-trips through the server action call.
   const [honeypot, setHoneypot] = useState("");
@@ -75,6 +76,10 @@ function AuditPageInner() {
     if (draft) {
       form.reset(draft);
     }
+    const draftEmail = loadJson<string>(localStorageOrNull(), STORAGE_KEYS.draftEmail, "");
+    if (draftEmail) {
+      setContactEmail(draftEmail);
+    }
     // Intentionally only run on mount — `form` is stable across renders.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -87,13 +92,22 @@ function AuditPageInner() {
     return () => sub.unsubscribe();
   }, [form]);
 
+  useEffect(() => {
+    saveJson(localStorageOrNull(), STORAGE_KEYS.draftEmail, contactEmail);
+  }, [contactEmail]);
+
   const fieldArray = useFieldArray({ control: form.control, name: "lines" });
 
   const onSubmit = (values: AuditFormValues) => {
     setSubmitError(null);
+    const email = contactEmail.trim().toLowerCase();
+    if (!isPlausibleEmail(email)) {
+      setSubmitError("Enter a valid email so we can re-audit this stack later.");
+      return;
+    }
     startTransition(async () => {
       try {
-        const state = await runAuditAction({ input: values, honeypot, via });
+        const state = await runAuditAction({ input: values, email, honeypot, via });
         if (state.status === "error") {
           setSubmitError(state.message);
           return;
@@ -102,6 +116,7 @@ function AuditPageInner() {
         // can render without re-running the engine.
         saveJson(sessionStorageOrNull(), STORAGE_KEYS.lastResult, state.result);
         saveJson(sessionStorageOrNull(), STORAGE_KEYS.lastAuditId, state.auditId);
+        saveJson(sessionStorageOrNull(), STORAGE_KEYS.lastAuditEmail, email);
         router.push("/audit/result");
       } catch {
         // Server action threw (network, runtime). Without this, startTransition
@@ -135,18 +150,13 @@ function AuditPageInner() {
    * actual differs. Usage-billed plans (Anthropic API, OpenAI API) have no
    * list price; we leave whatever the user has typed.
    */
-  const suggestListPriceSpend = (
-    index: number,
-    toolId: ToolId,
-    planId: string,
-  ) => {
+  const suggestListPriceSpend = (index: number, toolId: ToolId, planId: string) => {
     const plan = TOOLS[toolId]?.plans.find((p) => p.id === planId);
     if (!plan) return;
     if (plan.kind === "usage") return;
     const rawSeats = Number(form.getValues(`lines.${index}.seats`)) || 1;
     const effectiveSeats = Math.max(rawSeats, plan.minSeats ?? 1);
-    const monthly =
-      plan.kind === "free" ? 0 : plan.pricePerSeatMonthly * effectiveSeats;
+    const monthly = plan.kind === "free" ? 0 : plan.pricePerSeatMonthly * effectiveSeats;
     form.setValue(`lines.${index}.monthlySpendUsd`, monthly, {
       shouldValidate: false,
     });
@@ -181,16 +191,12 @@ function AuditPageInner() {
           What does your AI stack actually cost?
         </h1>
         <p className="text-muted-fg pretty mt-3 max-w-xl text-base leading-relaxed">
-          Add the tools you pay for. We&apos;ll surface plan-fit issues, cheaper alternatives,
-          and credit-based discounts — with a vendor URL for every recommendation.
+          Add the tools you pay for. We&apos;ll surface plan-fit issues, cheaper alternatives, and
+          credit-based discounts — with a vendor URL for every recommendation.
         </p>
       </header>
 
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-8"
-        noValidate
-      >
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8" noValidate>
         <Card>
           <CardHeader>
             <CardTitle>Your team</CardTitle>
@@ -206,9 +212,7 @@ function AuditPageInner() {
                 {...form.register("teamSize")}
               />
               {form.formState.errors.teamSize && (
-                <p className="text-warning text-xs">
-                  {form.formState.errors.teamSize.message}
-                </p>
+                <p className="text-warning text-xs">{form.formState.errors.teamSize.message}</p>
               )}
             </div>
             <div className="space-y-2">
@@ -220,6 +224,30 @@ function AuditPageInner() {
                   </option>
                 ))}
               </Select>
+            </div>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Where to send re-audit alerts</CardTitle>
+            <p className="text-muted-fg mt-1 text-xs">
+              Round 2 stores each audit with an email so pricing-change reruns can reach the same
+              inbox later.
+            </p>
+          </CardHeader>
+          <CardBody>
+            <div className="space-y-2">
+              <Label htmlFor="contactEmail">Email</Label>
+              <Input
+                id="contactEmail"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                placeholder="you@startup.com"
+                value={contactEmail}
+                onChange={(e) => setContactEmail(e.target.value)}
+              />
             </div>
           </CardBody>
         </Card>
@@ -247,8 +275,7 @@ function AuditPageInner() {
                     <Select
                       id={`tool-${index}`}
                       {...form.register(`lines.${index}.toolId`, {
-                        onChange: (e) =>
-                          onChangeTool(index, e.target.value as ToolId),
+                        onChange: (e) => onChangeTool(index, e.target.value as ToolId),
                       })}
                     >
                       {ALL_TOOLS.map((t) => (
@@ -305,9 +332,7 @@ function AuditPageInner() {
                       {...form.register(`lines.${index}.monthlySpendUsd`)}
                     />
                     {errors?.monthlySpendUsd ? (
-                      <p className="text-warning text-xs">
-                        {errors.monthlySpendUsd.message}
-                      </p>
+                      <p className="text-warning text-xs">{errors.monthlySpendUsd.message}</p>
                     ) : (
                       <p className="text-muted-fg text-[11px]">
                         Pre-filled from list price · edit if your actual differs
@@ -332,9 +357,7 @@ function AuditPageInner() {
             })}
 
             {form.formState.errors.lines?.message && (
-              <p className="text-warning text-sm">
-                {form.formState.errors.lines.message}
-              </p>
+              <p className="text-warning text-sm">{form.formState.errors.lines.message}</p>
             )}
 
             <Button type="button" variant="secondary" size="md" onClick={addLine}>
@@ -345,7 +368,10 @@ function AuditPageInner() {
         </Card>
 
         {/* Honeypot — visually hidden, hidden from assistive tech, only bots fill it. */}
-        <div aria-hidden="true" className="absolute -left-[10000px] top-auto h-px w-px overflow-hidden">
+        <div
+          aria-hidden="true"
+          className="absolute top-auto -left-[10000px] h-px w-px overflow-hidden"
+        >
           <label>
             Leave this field empty
             <input
@@ -360,15 +386,10 @@ function AuditPageInner() {
 
         <div className="flex flex-col-reverse items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-muted-fg text-xs">
-            We don&apos;t store anything until you ask for the report by email.
+            This audit is stored with your email so Snipper can re-run it if pricing changes.
           </p>
           <div className="flex flex-col items-stretch gap-2 sm:items-end">
-            <Button
-              type="submit"
-              size="lg"
-              className="sm:min-w-44"
-              disabled={isPending}
-            >
+            <Button type="submit" size="lg" className="sm:min-w-44" disabled={isPending}>
               {isPending ? "Running…" : "Run my audit"}
               <ArrowRight className="h-4 w-4" />
             </Button>
@@ -382,4 +403,8 @@ function AuditPageInner() {
       </form>
     </main>
   );
+}
+
+function isPlausibleEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }

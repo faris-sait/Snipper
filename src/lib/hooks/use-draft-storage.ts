@@ -39,8 +39,7 @@ export function clearKey(storage: Storage | null, key: string): void {
   }
 }
 
-export const localStorageOrNull = (): Storage | null =>
-  isBrowser ? window.localStorage : null;
+export const localStorageOrNull = (): Storage | null => (isBrowser ? window.localStorage : null);
 
 export const sessionStorageOrNull = (): Storage | null =>
   isBrowser ? window.sessionStorage : null;
@@ -48,6 +47,8 @@ export const sessionStorageOrNull = (): Storage | null =>
 export const STORAGE_KEYS = {
   /** Draft form state for /audit */
   draftForm: "snipper:draft:v1",
+  /** Companion draft for the audit contact email. */
+  draftEmail: "snipper:draft_email:v1",
   /** Hand-off slot for the most recent audit result, read by /audit/result */
   lastResult: "snipper:last_result:v1",
   /**
@@ -56,6 +57,8 @@ export const STORAGE_KEYS = {
    * affordance. Null when the user ran in local-only mode.
    */
   lastAuditId: "snipper:last_audit_id:v1",
+  /** Email captured when the most recent audit was submitted. */
+  lastAuditEmail: "snipper:last_audit_email:v1",
   /**
    * Optimal-path "notify me" fallback. Used when persistence isn't configured
    * — the form posts to a server action first, this is the local mirror so the

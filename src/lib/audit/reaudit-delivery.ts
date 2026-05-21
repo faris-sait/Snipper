@@ -8,6 +8,7 @@ export type ReauditSendStatus =
 export interface AddressableAffectedAudit {
   auditId: string;
   diff: AuditDiff;
+  priceChanges: string[];
 }
 
 export interface DeliverGroupedReauditNotificationsResult {

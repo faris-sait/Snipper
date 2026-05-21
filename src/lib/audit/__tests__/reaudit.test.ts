@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
+vi.mock("server-only", () => ({}));
+
 import { diffAuditResults } from "@/lib/audit/diff";
 import { runAudit } from "@/lib/audit/engine";
 import type { AuditInput } from "@/lib/audit/types";
@@ -10,6 +12,7 @@ import {
   deliverGroupedReauditNotifications,
   type AddressableAffectedAudit,
 } from "../reaudit-delivery";
+import { summariseAuditPriceChanges } from "../reaudit";
 
 type SendEmail = NonNullable<Parameters<typeof deliverGroupedReauditNotifications>[0]["sendEmail"]>;
 
@@ -37,10 +40,12 @@ function makeAffectedAudit(
 ): AddressableAffectedAudit {
   const oldResult = runAudit(input);
   const newResult = runAudit(input, undefined, tools);
+  const diff = diffAuditResults(oldResult, newResult);
 
   return {
     auditId,
-    diff: diffAuditResults(oldResult, newResult),
+    diff,
+    priceChanges: summariseAuditPriceChanges(diff, TOOLS, tools),
   };
 }
 
@@ -103,14 +108,28 @@ describe("deliverGroupedReauditNotifications", () => {
       to: "one@example.com",
       siteUrl: "https://snipper.example.com",
       items: [
-        { auditId: "abc12345xyzz", diff: first.diff },
-        { auditId: "def67890lmno", diff: second.diff },
+        {
+          auditId: "abc12345xyzz",
+          diff: first.diff,
+          priceChanges: first.priceChanges,
+        },
+        {
+          auditId: "def67890lmno",
+          diff: second.diff,
+          priceChanges: second.priceChanges,
+        },
       ],
     });
     expect(sendEmail).toHaveBeenNthCalledWith(2, {
       to: "two@example.com",
       siteUrl: "https://snipper.example.com",
-      items: [{ auditId: "ghi24680pqrs", diff: third.diff }],
+      items: [
+        {
+          auditId: "ghi24680pqrs",
+          diff: third.diff,
+          priceChanges: third.priceChanges,
+        },
+      ],
     });
 
     expect(persistNotifications).toHaveBeenCalledTimes(2);

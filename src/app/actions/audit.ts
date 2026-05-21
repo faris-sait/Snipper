@@ -13,17 +13,12 @@ import {
   persistAudit,
   persistLead,
   persistNotifySignup,
+  setAuditEmail,
   setAuditSummary,
 } from "@/lib/db/audits";
 import { isPersistenceConfigured } from "@/lib/db/supabase";
-import {
-  buildPerAuditSnapshot,
-  getEffectiveTools,
-} from "@/lib/pricing/effective";
-import {
-  sendAuditLeadConfirmation,
-  sendNotifyConfirmation,
-} from "@/lib/email/send";
+import { buildPerAuditSnapshot, getEffectiveTools } from "@/lib/pricing/effective";
+import { sendAuditLeadConfirmation, sendNotifyConfirmation } from "@/lib/email/send";
 import { renderAuditReportPdfBuffer } from "@/lib/pdf/render";
 
 export type RunAuditState =
@@ -36,6 +31,7 @@ export type CaptureLeadState =
 
 interface RunAuditArgs {
   input: unknown;
+  email: string;
   /** Honeypot field — bots fill every input; humans never see it. */
   honeypot?: string;
   /**
@@ -48,6 +44,10 @@ interface RunAuditArgs {
 export async function runAuditAction(args: RunAuditArgs): Promise<RunAuditState> {
   if (args.honeypot && args.honeypot.trim().length > 0) {
     return { status: "error", message: "Submission rejected." };
+  }
+  const email = args.email.trim().toLowerCase();
+  if (!isPlausibleEmail(email)) {
+    return { status: "error", message: "Enter a valid email." };
   }
 
   const parsed = AuditFormSchema.safeParse(args.input);
@@ -72,15 +72,14 @@ export async function runAuditAction(args: RunAuditArgs): Promise<RunAuditState>
     // Mirror the canonical-length guard on `/a/[id]?via=` — anything other
     // than a 12-char id never persists into `request_meta.referred_by`.
     const referrer =
-      args.via && isWellFormedAuditId(args.via) && args.via.length === 12
-        ? args.via
-        : null;
+      args.via && isWellFormedAuditId(args.via) && args.via.length === 12 ? args.via : null;
     const pricingSnapshot = buildPerAuditSnapshot(
       effective.tools,
       parsed.data.lines.map((l) => l.toolId),
     );
     await persistAudit({
       id,
+      email,
       input: parsed.data,
       result,
       pricingSnapshot,
@@ -113,9 +112,7 @@ interface CaptureLeadArgs {
   honeypot?: string;
 }
 
-export async function captureLeadAction(
-  args: CaptureLeadArgs,
-): Promise<CaptureLeadState> {
+export async function captureLeadAction(args: CaptureLeadArgs): Promise<CaptureLeadState> {
   if (args.honeypot && args.honeypot.trim().length > 0) {
     return { status: "error", message: "Submission rejected." };
   }
@@ -135,6 +132,10 @@ export async function captureLeadAction(
   }
 
   try {
+    if (args.auditId) {
+      await setAuditEmail(args.auditId, email);
+    }
+
     if (args.kind === "lead") {
       // Lead capture requires a persisted audit (FK constraint on audit_leads).
       // If the audit wasn't persisted (transient Supabase failure during the
@@ -292,13 +293,9 @@ interface SummaryArgs {
  * so caching wouldn't save anything, and skipping the cache lets the next view
  * try AI again if the prior failure was transient.
  */
-export async function getOrGenerateSummaryAction(
-  args: SummaryArgs,
-): Promise<SummaryActionState> {
+export async function getOrGenerateSummaryAction(args: SummaryArgs): Promise<SummaryActionState> {
   const persistAvailable =
-    !!args.auditId &&
-    isWellFormedAuditId(args.auditId) &&
-    isPersistenceConfigured();
+    !!args.auditId && isWellFormedAuditId(args.auditId) && isPersistenceConfigured();
 
   if (persistAvailable) {
     const cached = await getAuditSummary(args.auditId!).catch(() => null);
